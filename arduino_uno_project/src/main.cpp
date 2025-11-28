@@ -4,11 +4,11 @@
 
 #include <Arduino.h>
 
-#define KLOK 13  // Pin 13 - Shift register clock
-#define DATA 12  // Pin 12 - Shift register data
+#define KLOK 2  // Pin 2 - Shift register clock
+#define DATA 3  // Pin 3 - Shift register data
 
 // Row pins - 7 pins needed for the display rows
-byte pinRij[7] = {2, 3, 4, 5, 6, 7, 8};  // Digital pins 2-8 for rows
+byte pinRij[7] = {4, 5, 6, 7, 8, 9, 10};  // Digital pins 4-10 for rows
 
 #define pulstijd 1500  // Pulse time in microseconds
 
@@ -125,6 +125,7 @@ void setup() {
   // Initialize pins
   pinMode(KLOK, OUTPUT);
   pinMode(DATA, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);  // Built-in LED for debugging
   for (int i = 0; i <= 6; i++) {
     pinMode(pinRij[i], OUTPUT);
   }
@@ -133,8 +134,10 @@ void setup() {
   strcpy((char*)tekst, "Arduino UNO OK!");
   tekstLength = 15;
 
-  Serial.println("Arduino Uno LED Bar Controller Ready");
-  Serial.println("Showing startup message...");
+  // Blink LED to show startup
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
 
   // Display startup message for 3 seconds
   unsigned long startTime = millis();
@@ -145,27 +148,39 @@ void setup() {
   // Default text after startup
   strcpy((char*)tekst, "Waiting for D1...");
   tekstLength = 18;
-
-  Serial.println("Ready to receive from D1 Mini");
 }
 
 void loop() {
   // Check for incoming serial data from D1 Mini
   if (Serial.available() > 0) {
+    // Blink LED to show data received
+    digitalWrite(LED_BUILTIN, HIGH);
+
     // Read the text from serial (format: "TEXT:your text here\n")
     String command = Serial.readStringUntil('\n');
+
+    // Display whatever we received (for debugging)
+    String displayData;
     if (command.startsWith("TEXT:")) {
-      String newText = command.substring(5);
-      tekstLength = min(newText.length(), 99);
-      for (int i = 0; i < tekstLength; i++) {
-        tekst[i] = newText.charAt(i);
-      }
-      tekst[tekstLength] = '\0';
+      displayData = command.substring(5);
 
       // Send ACK back to D1 Mini
       Serial.print("ACK:");
-      Serial.println((char*)tekst);
+      Serial.println(displayData);
+      Serial.flush();  // Make sure ACK is sent immediately
+    } else {
+      // Show what we got even if invalid
+      displayData = "RX:" + command;
     }
+
+    // Update display with received data
+    tekstLength = min(displayData.length(), 99);
+    for (int i = 0; i < tekstLength; i++) {
+      tekst[i] = displayData.charAt(i);
+    }
+    tekst[tekstLength] = '\0';
+
+    digitalWrite(LED_BUILTIN, LOW);
   }
 
   // Display the text
@@ -174,7 +189,9 @@ void loop() {
 
 void displayText() {
   for (int rij = 0; rij <= 6; rij++) {
+    // Normal character order (forward)
     for (int kar = 0; kar < tekstLength; kar++) {
+      // Normal column order (forward)
       for (int kolom = 0; kolom <= 4; kolom++) {
         if (bitRead((Font5x7[(tekst[kar]-32)*5+kolom]), rij)) {
           digitalWrite(KLOK, HIGH);
@@ -193,8 +210,9 @@ void displayText() {
     digitalWrite(KLOK, HIGH);
     digitalWrite(KLOK, LOW);
 
-    digitalWrite(pinRij[rij], HIGH);
+    // Reverse row pins - flip upside down
+    digitalWrite(pinRij[6-rij], HIGH);
     delayMicroseconds(pulstijd);
-    digitalWrite(pinRij[rij], LOW);
+    digitalWrite(pinRij[6-rij], LOW);
   }
 }
