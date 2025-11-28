@@ -1,2 +1,4 @@
 # Claude Code files
 .claude/
+arduino_uno_project/.pio/
+.pio/
