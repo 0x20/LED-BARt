@@ -51,7 +51,7 @@ platformio device monitor -e xiao_esp32c3_direct
 1. Power on - LED bar displays **"ESP32 Ready!"** for 2 seconds
 2. Device creates WiFi access point:
    - **SSID**: `LED-BARt`
-   - **Password**: `ledbart123` 🦄
+   - **Password**: `ledbart123`
 3. Connect to WiFi and open browser to `http://192.168.4.1`
 4. Click **"Configuration"** and enter your WiFi credentials
 5. Save & reboot
