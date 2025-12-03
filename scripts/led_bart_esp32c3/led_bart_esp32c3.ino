@@ -1,5 +1,5 @@
 // M. Wyns 2017
-// Ported to ESP8266 2025
+// Ported to Seeeduino XIAO ESP32-C3 2025
 
 //#include <TimerOne.h>
 #include <TimeLib.h>
@@ -9,23 +9,17 @@
 int teller =0;
 float tempC = 0;
 
-// ESP8266 D1 Mini Pin Mapping
-// D0 = GPIO16 (wake from deep sleep, no PWM/I2C)
-// D1 = GPIO5 (SCL - I2C clock)
-// D2 = GPIO4 (SDA - I2C data)
-// D3 = GPIO0 (FLASH button, pulled up, boot fails if pulled low)
-// D4 = GPIO2 (built-in LED, pulled up, boot fails if pulled low)
-// D5 = GPIO14 (SCLK)
-// D6 = GPIO12 (MISO)
-// D7 = GPIO13 (MOSI)
-// D8 = GPIO15 (pulled to GND, boot fails if pulled high)
+// Seeeduino XIAO ESP32-C3 Pin Mapping
+// D0-D10 available as GPIO pins
+// D8 (GPIO8) and D9 (GPIO9) are strapping pins - avoid if possible
+// D0 (GPIO2) is also strapping pin but can be used carefully
 
-#define KLOK D5  // GPIO14 - lichtkrant clock
-#define DATA D6  // GPIO12 - lichtkrant data
+#define KLOK D2  // lichtkrant clock
+#define DATA D3  // lichtkrant data
 
 // Row pins - 7 pins needed for the display rows
-// Using D0, D1, D2, D3, D4, D7, D8
-byte pinRij[7] = {D0, D1, D2, D3, D4, D7, D8};  // GPIO16, GPIO5, GPIO4, GPIO0, GPIO2, GPIO13, GPIO15
+// Avoiding D8 and D9 (strapping pins that can cause boot issues)
+byte pinRij[7] = {D4, D5, D6, D7, D1, D10, D0};  // was {4,5,6,7,8,9,10}
 
 #define pulstijd 1500
 
@@ -135,31 +129,32 @@ void setup() {
   pinMode(KLOK, OUTPUT);
   pinMode(DATA, OUTPUT);
   for (int i =0; i <=6; i++) pinMode(pinRij[i],OUTPUT);
-//  Timer1.initialize(500000);
-//  Timer1.attachInterrupt( timerIsr );
-//  Wire.begin();   // I2C initialiseren
-  Serial.begin(115200);  // ESP8266 typically uses 115200 baud
 }
 
 void loop() {
- for (int rij = 0; rij <= 6; rij++) {
+ for (int rij = 0; rij <= 1; rij++) {
    for (int kar = 0; kar <= 18; kar++) {
      for (int kolom = 0; kolom <= 4; kolom++) {
        if (bitRead((Font5x7[(tekst[kar]-32)*5+kolom]),rij)) {
+         digitalWrite(DATA, HIGH);
+         delayMicroseconds(20);
          digitalWrite(KLOK, HIGH);
-         digitalWrite(DATA, HIGH);
+         delayMicroseconds(20);
          digitalWrite(KLOK, LOW);
-         digitalWrite(DATA, HIGH);
+         delayMicroseconds(20);
        }
        else {
+         digitalWrite(DATA, LOW);
+         delayMicroseconds(20);
          digitalWrite(KLOK, HIGH);
-         digitalWrite(DATA, LOW);
+         delayMicroseconds(20);
          digitalWrite(KLOK, LOW);
-         digitalWrite(DATA, LOW);
+         delayMicroseconds(20);
        }
       }
     }
     digitalWrite(KLOK, HIGH);
+    delayMicroseconds(20);
     digitalWrite(KLOK, LOW);
 
     digitalWrite(pinRij[rij], HIGH);
@@ -186,7 +181,6 @@ void loop() {
     tekst[10] = month() % 10 + 0x30;
 
     tempC = getTemp();
-    Serial.println(tempC);
     tekst[13] = tempC / 10 + 0x30;
     tekst[14] = (int)(tempC) % 10 + 0x30;
     tekst[16] = (int)(tempC * 10) % 10 + 0x30;
@@ -198,7 +192,6 @@ void loop() {
 float getTemp(){
   return 26;
 
-//  Wire.begin();  // ESP8266 I2C: SDA=D2(GPIO4), SCL=D1(GPIO5) by default
 //  Wire.beginTransmission(TMP102_I2C_ADDRESS);
 //  Wire.write(0x00);    // pointer register
 //  Wire.endTransmission();

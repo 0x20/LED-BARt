@@ -147,7 +147,7 @@ void loop() {
     }
     digitalWrite(KLOK, HIGH);
     digitalWrite(KLOK, LOW);
-
+  
     digitalWrite(pinRij[rij], HIGH);
     delayMicroseconds(pulstijd);
     digitalWrite(pinRij[rij], LOW);
