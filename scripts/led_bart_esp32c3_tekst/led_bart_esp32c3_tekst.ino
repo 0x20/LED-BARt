@@ -14,12 +14,10 @@ float tempC = 0;
 // D8 (GPIO8) and D9 (GPIO9) are strapping pins - avoid if possible
 // D0 (GPIO2) is also strapping pin but can be used carefully
 
-#define KLOK D2  // lichtkrant clock
-#define DATA D3  // lichtkrant data
+#define KLOK D1  // lichtkrant clock
+#define DATA D2  // lichtkrant data
 
-// Row pins - 7 pins needed for the display rows
-// Avoiding D8 and D9 (strapping pins that can cause boot issues)
-byte pinRij[7] = {D4, D5, D6, D7, D1, D10, D0};  // was {4,5,6,7,8,9,10}
+byte pinRij[7] = {D10, D8, D7, D6, D5, D4, D3};   
 
 #define pulstijd 1500
 
@@ -132,29 +130,30 @@ void setup() {
 }
 
 void loop() {
- for (int rij = 0; rij <= 1; rij++) {
-   for (int kar = 0; kar <= 18; kar++) {
-     for (int kolom = 0; kolom <= 4; kolom++) {
-       if (bitRead((Font5x7[(tekst[kar]-32)*5+kolom]),rij)) {
-         digitalWrite(DATA, HIGH);
-         delayMicroseconds(20);
-         digitalWrite(KLOK, HIGH);
-         delayMicroseconds(20);
-         digitalWrite(KLOK, LOW);
-         delayMicroseconds(20);
-       }
-       else {
-         digitalWrite(DATA, LOW);
-         delayMicroseconds(20);
-         digitalWrite(KLOK, HIGH);
-         delayMicroseconds(20);
-         digitalWrite(KLOK, LOW);
-         delayMicroseconds(20);
-       }
+  for (int rij = 0; rij <= 6; rij++) {
+    for (int kar = 0; kar <= 18; kar++) {
+      for (int kolom = 0; kolom <= 4; kolom++) {
+        if (bitRead((Font5x7[(tekst[kar]-32)*5+kolom]),rij)) {
+          digitalWrite(DATA, HIGH);
+          delayMicroseconds(2);
+          digitalWrite(KLOK, HIGH);
+          delayMicroseconds(2);
+          digitalWrite(KLOK, LOW);
+          delayMicroseconds(2);
+        }
+        else {
+          digitalWrite(DATA, LOW);
+          delayMicroseconds(2);
+          digitalWrite(KLOK, HIGH);
+          delayMicroseconds(2);
+          digitalWrite(KLOK, LOW);
+          delayMicroseconds(2);
+        }
       }
     }
+    
     digitalWrite(KLOK, HIGH);
-    delayMicroseconds(20);
+    delayMicroseconds(2);
     digitalWrite(KLOK, LOW);
 
     digitalWrite(pinRij[rij], HIGH);
@@ -162,45 +161,6 @@ void loop() {
     digitalWrite(pinRij[rij], LOW);
   }
 
+  // do stuff
 
-  teller++;
-
-  if (teller % 40 == 0) {     // +/- 0.5 s
-    if (tekst[2] == ':') tekst[2] = ' ';
-    else tekst[2] = ':';
-  }
-
-  if (teller % 800 == 0) {    // +/- 10 s
-    tekst[0] = hour() / 10 + 0x30;
-    tekst[1] = hour() % 10 + 0x30;
-    tekst[3] = minute() / 10 + 0x30;
-    tekst[4] = minute() % 10 + 0x30;
-    tekst[6] = day() / 10 + 0x30;
-    tekst[7] = day() % 10 + 0x30;
-    tekst[9] = month() / 10 + 0x30;
-    tekst[10] = month() % 10 + 0x30;
-
-    tempC = getTemp();
-    tekst[13] = tempC / 10 + 0x30;
-    tekst[14] = (int)(tempC) % 10 + 0x30;
-    tekst[16] = (int)(tempC * 10) % 10 + 0x30;
-    teller = 0;
-  }
-}
-
-
-float getTemp(){
-  return 26;
-
-//  Wire.beginTransmission(TMP102_I2C_ADDRESS);
-//  Wire.write(0x00);    // pointer register
-//  Wire.endTransmission();
-//  Wire.requestFrom(TMP102_I2C_ADDRESS, 2); // 2 bytes opvragen
-//  Wire.endTransmission();
-//  byte MSB = Wire.read();
-//  byte LSB = Wire.read();
-//  int waarde = ((MSB) << 4);
-//  waarde |= (LSB >> 4);
-//  float temperatuur = waarde*0.0625;
-//  return temperatuur;
 }
