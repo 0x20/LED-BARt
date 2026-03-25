@@ -8,7 +8,10 @@ byte pinRij[7] = {10,9,8,7,6,5,4};
 #define pulstijd 1500
 
 const byte TEKST_LEN = 19;
-unsigned char tekst[TEKST_LEN] = {'t','h','e',' ','l','e','d',' ','b','a','r','t', ' ','w','o','r', 'k','s','!'};
+unsigned char tekst[TEKST_LEN] = {'w','a','i','t','i','n','g',' ','f','o','r',' ','d','a','t','a','.','.','.'};
+
+char serialBuf[TEKST_LEN + 1];
+byte serialIdx = 0;
 
 static unsigned char Font5x7[] = {
   0x00, 0x00, 0x00, 0x00, 0x00,// (space) 32
@@ -108,7 +111,23 @@ static unsigned char Font5x7[] = {
   0x00, 0x07, 0x05, 0x07, 0x00 // °  126
 };
 
+void checkSerial() {
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n') {
+      if (serialIdx > 0 && serialBuf[serialIdx - 1] == '\r') serialIdx--;
+      for (byte i = 0; i < TEKST_LEN; i++) {
+        tekst[i] = (i < serialIdx) ? serialBuf[i] : ' ';
+      }
+      serialIdx = 0;
+    } else if (serialIdx < TEKST_LEN) {
+      serialBuf[serialIdx++] = c;
+    }
+  }
+}
+
 void setup() {
+  Serial.begin(9600);
   pinMode(KLOK, OUTPUT);
   pinMode(DATA, OUTPUT);
   for (int i = 0; i <= 6; i++) pinMode(pinRij[i], OUTPUT);
@@ -138,4 +157,6 @@ void loop() {
     delayMicroseconds(pulstijd);
     digitalWrite(pinRij[rij], LOW);
   }
+
+  checkSerial();
 }
