@@ -52,6 +52,7 @@ void setup() {
   Serial.begin(115200);
   UnoSerial.begin(9600, SERIAL_8N1, -1, -1);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
+  WiFi.setSleep(false);
   log("Connecting to WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);

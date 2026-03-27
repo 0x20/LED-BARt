@@ -45,4 +45,5 @@ Max 19 characters — longer text is truncated, shorter is padded with spaces.
 |--------|------|------|
 | `scripts/led_bart_esp32c3_webserver/` | Xiao ESP32-C3 | HTTP → UART bridge + mDNS (`ledbart.local`) |
 | `scripts/led_bart_arduino_uno_uart_display/` | Arduino Uno | UART → LED bar driver (active) |
+| `scripts/font_preview.py` | — | Preview 5x7 font glyphs in the terminal |
 | `scripts/legacy/led_bart_arduino_uno_og/` | Arduino Uno | original reference code |
