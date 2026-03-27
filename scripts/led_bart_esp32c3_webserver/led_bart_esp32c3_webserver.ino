@@ -1,9 +1,11 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include <ESPmDNS.h>
 #include <HardwareSerial.h>
 
 #define WIFI_SSID "0x20"
 #define WIFI_PASS "unicorns"
+#define MDNS_HOSTNAME "ledbart"
 
 // UART0 default pins: D6=TX, D7=RX
 HardwareSerial UnoSerial(0);
@@ -31,7 +33,14 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nIP: " + WiFi.localIP().toString());
-  
+
+  if (MDNS.begin(MDNS_HOSTNAME)) {
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("mDNS: http://" MDNS_HOSTNAME ".local");
+  } else {
+    Serial.println("mDNS failed");
+  }
+
   server.on("/text", HTTP_POST, handleText);
   server.begin();
 }

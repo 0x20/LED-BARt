@@ -14,10 +14,10 @@ Accepts text commands over HTTP on the LAN and forwards them to the Arduino Uno 
 ## Usage
 
 ```bash
- curl -X POST http://10.51.1.141/text -H "Content-Type: text/plain" -d "SAMPLE TEXT"
+curl -X POST http://ledbart.local/text -H "Content-Type: text/plain" -d "SAMPLE TEXT"
 ```
 
-The IP is printed to Serial on boot (115200 baud).
+Reachable via mDNS at `ledbart.local`. The IP is also printed to Serial on boot (115200 baud).
 Max 19 characters — longer text is truncated, shorter is padded with spaces.
 
 ## Endpoint

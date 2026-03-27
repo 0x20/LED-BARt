@@ -23,10 +23,10 @@ Xiao ESP32-C3          Arduino Uno
 Send text to the display:
 
 ```bash
-curl -X POST http://10.51.1.141/text -H "Content-Type: text/plain" -d "HELLO WORLD"
+curl -X POST http://ledbart.local/text -H "Content-Type: text/plain" -d "HELLO WORLD"
 ```
 
-> **Note:** The current static IP is `10.51.1.141` on the hackerspace LAN. This will change — mDNS support is planned so you can use a hostname instead. The IP is also printed to Serial (115200 baud) on boot.
+Reachable via mDNS at `ledbart.local`. The IP is also printed to Serial (115200 baud) on boot.
 
 Max 19 characters — longer text is truncated, shorter is padded with spaces.
 
@@ -43,6 +43,6 @@ Max 19 characters — longer text is truncated, shorter is padded with spaces.
 
 | Folder | Chip | Role |
 |--------|------|------|
-| `scripts/led_bart_esp32c3_webserver/` | Xiao ESP32-C3 | HTTP → UART bridge |
+| `scripts/led_bart_esp32c3_webserver/` | Xiao ESP32-C3 | HTTP → UART bridge + mDNS (`ledbart.local`) |
 | `scripts/led_bart_arduino_uno_uart_display/` | Arduino Uno | UART → LED bar driver (active) |
 | `scripts/led_bart_arduino_uno_og/` | Arduino Uno | original reference code |
