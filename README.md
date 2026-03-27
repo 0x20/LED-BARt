@@ -23,10 +23,12 @@ Xiao ESP32-C3          Arduino Uno
 Send text to the display:
 
 ```bash
-curl -X POST http://<ESP_IP>/text -H "Content-Type: text/plain" -d "HELLO WORLD"
+curl -X POST http://10.51.1.141/text -H "Content-Type: text/plain" -d "HELLO WORLD"
 ```
 
-The IP is printed to Serial (115200 baud) on boot. Max 19 characters — longer text is truncated, shorter is padded with spaces.
+> **Note:** The current static IP is `10.51.1.141` on the hackerspace LAN. This will change — mDNS support is planned so you can use a hostname instead. The IP is also printed to Serial (115200 baud) on boot.
+
+Max 19 characters — longer text is truncated, shorter is padded with spaces.
 
 ## Wiring
 
