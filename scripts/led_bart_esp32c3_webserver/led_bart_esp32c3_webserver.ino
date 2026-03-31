@@ -33,7 +33,19 @@ void log(const String &msg) {
     logBuffer = logBuffer.substring(logBuffer.length() - LOG_MAX);
 }
 
+void cors() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+void handleOptions() {
+  cors();
+  server.send(204);
+}
+
 void handleText() {
+  cors();
   if (!server.hasArg("plain")) {
     server.send(400, "text/plain", "no body");
     return;
@@ -45,6 +57,7 @@ void handleText() {
 }
 
 void handleLog() {
+  cors();
   server.send(200, "text/plain", logBuffer);
 }
 
@@ -67,7 +80,9 @@ void setup() {
   }
 
   server.on("/text", HTTP_POST, handleText);
+  server.on("/text", HTTP_OPTIONS, handleOptions);
   server.on("/log", HTTP_GET, handleLog);
+  server.on("/log", HTTP_OPTIONS, handleOptions);
   server.begin();
 }
 
