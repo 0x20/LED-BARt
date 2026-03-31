@@ -20,6 +20,8 @@ Xiao ESP32-C3          Arduino Uno
 
 ## Web Interface
 
+Live at https://0x20.github.io/LED-BARt/
+
 ![LED-BARt web interface](images/frontend.png)
 
 The `website/` folder contains a web frontend with a live pixel-accurate preview using the same 5x7 font as the hardware. Serve it from any machine on the LAN and configure a reverse proxy to forward `/text` and `/log` to the ESP32.
