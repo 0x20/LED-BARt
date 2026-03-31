@@ -1,0 +1,149 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Courier New', monospace;
+  background: #111;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #ff3333;
+  text-shadow: 0 0 10px rgba(255, 50, 50, 0.5);
+  letter-spacing: 0.15em;
+}
+
+.container {
+  width: 100%;
+  max-width: 500px;
+}
+
+.led-preview {
+  background: #000;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.led-preview canvas {
+  width: 100%;
+  image-rendering: pixelated;
+}
+
+.input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 6px;
+  color: #e0e0e0;
+  outline: none;
+  letter-spacing: 0.1em;
+}
+
+input[type="text"]:focus {
+  border-color: #ff3333;
+  box-shadow: 0 0 8px rgba(255, 50, 50, 0.3);
+}
+
+button {
+  padding: 0.75rem 1.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: bold;
+  background: #ff3333;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #cc2222;
+}
+
+button:active {
+  background: #aa1111;
+}
+
+button:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.char-count.over {
+  color: #ff3333;
+}
+
+.status {
+  text-align: center;
+  font-size: 0.9rem;
+  min-height: 1.5em;
+  margin-bottom: 1.5rem;
+}
+
+.status.ok {
+  color: #33ff33;
+}
+
+.status.err {
+  color: #ff3333;
+}
+
+.log-section h2 {
+  font-size: 1rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.log-section h2:hover {
+  color: #bbb;
+}
+
+.log-box {
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  color: #888;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

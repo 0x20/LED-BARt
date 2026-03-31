@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LED-BARt</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>LED-BARt</h1>
+  <div class="container">
+    <div class="led-preview">
+      <canvas id="led-canvas"></canvas>
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="text-input" maxlength="19" placeholder="Type your message..." autofocus>
+      <button id="send-btn">SEND</button>
+    </div>
+    <div id="char-count" class="char-count">0 / 19</div>
+
+    <div id="status" class="status"></div>
+
+    <div class="log-section">
+      <h2 id="log-toggle">▸ Log</h2>
+      <div id="log-box" class="log-box" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

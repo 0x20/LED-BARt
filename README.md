@@ -18,9 +18,15 @@ Xiao ESP32-C3          Arduino Uno
 
 **Why two chips?** The LED bar needs 5V logic — the Arduino Uno provides that. The ESP32-C3 handles WiFi/Bluetooth but runs at 3.3V, so it can't drive the bar directly. They communicate over UART.
 
+## Web Interface
+
+![LED-BARt web interface](images/frontend.png)
+
+The `website/` folder contains a web frontend with a live pixel-accurate preview using the same 5x7 font as the hardware. Serve it from any machine on the LAN and configure a reverse proxy to forward `/text` and `/log` to the ESP32.
+
 ## Usage
 
-Send text to the display:
+Send text to the display via the web interface or directly:
 
 ```bash
 curl -X POST http://ledbart.local/text -H "Content-Type: text/plain" -d "HELLO WORLD"
