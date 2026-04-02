@@ -220,25 +220,25 @@ function ipToInt(ip) {
   return ip.split(".").reduce((n, o) => (n << 8) | +o, 0) >>> 0;
 }
 
-function getRoutingIP() {
+function getLocalIPs() {
   return new Promise(resolve => {
-    var pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    var ips = [], pc = new RTCPeerConnection({ iceServers: [] });
     pc.createDataChannel("");
     pc.createOffer().then(o => pc.setLocalDescription(o));
     pc.onicecandidate = e => {
-      if (!e.candidate) { pc.close(); resolve(null); return; }
-      // srflx candidate contains raddr = the local IP used for external routing
-      var m = e.candidate.candidate.match(/typ srflx raddr (\d+\.\d+\.\d+\.\d+)/);
-      if (m) { pc.close(); resolve(m[1]); }
+      if (!e.candidate) { pc.close(); resolve(ips); return; }
+      var m = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
+      if (m) ips.push(m[1]);
     };
-    setTimeout(() => { pc.close(); resolve(null); }, 5000);
+    setTimeout(() => { pc.close(); resolve(ips); }, 3000);
   });
 }
 
 (async function checkLAN() {
-  var ip = await getRoutingIP();
-  if (!ip) return; // can't determine — don't show warning
+  var ips = await getLocalIPs();
+  if (!ips.length) return; // can't determine — don't show warning
   var mask = ipToInt(SUBNET_MASK);
-  var onLAN = (ipToInt(ip) & mask) === (ipToInt(HACKERSPACE_SUBNET) & mask);
+  var net = ipToInt(HACKERSPACE_SUBNET) & mask;
+  var onLAN = ips.some(ip => (ipToInt(ip) & mask) === net);
   if (!onLAN) document.getElementById("lan-warning").style.display = "block";
 })();
