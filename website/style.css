@@ -16,6 +16,22 @@ body {
   padding: 2rem;
 }
 
+.lan-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #1a0000;
+  color: #ff4444;
+  border-bottom: 1px solid #ff3333;
+  text-align: center;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 8px rgba(255, 50, 50, 0.5);
+  z-index: 100;
+}
+
 h1 {
   font-size: 2rem;
   margin-bottom: 2rem;

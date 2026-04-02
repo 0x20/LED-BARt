@@ -212,3 +212,30 @@ lt.addEventListener("click", function () {
 });
 
 update();
+
+var HACKERSPACE_SUBNET = "10.51.2.84";
+var SUBNET_MASK = "255.255.252.0";
+
+function ipToInt(ip) {
+  return ip.split(".").reduce((n, o) => (n << 8) | +o, 0) >>> 0;
+}
+
+function getLocalIP() {
+  return new Promise(resolve => {
+    var pc = new RTCPeerConnection({ iceServers: [] });
+    pc.createDataChannel("");
+    pc.createOffer().then(o => pc.setLocalDescription(o));
+    pc.onicecandidate = e => {
+      var m = e.candidate?.candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
+      if (m) { pc.close(); resolve(m[1]); }
+    };
+    setTimeout(() => { pc.close(); resolve(null); }, 3000);
+  });
+}
+
+(async function checkLAN() {
+  var ip = await getLocalIP();
+  var mask = ipToInt(SUBNET_MASK);
+  var onLAN = ip && (ipToInt(ip) & mask) === (ipToInt(HACKERSPACE_SUBNET) & mask);
+  if (!onLAN) document.getElementById("lan-warning").style.display = "block";
+})();
