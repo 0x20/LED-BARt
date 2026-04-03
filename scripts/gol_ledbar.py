@@ -157,8 +157,8 @@ def main():
     if mode == "counter":
         counter_mode()
     else:
-        density = float(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1] != "gol" else 0.3
-        fps = float(sys.argv[2]) if len(sys.argv) > 2 else FPS
+        density = float(sys.argv[2]) if len(sys.argv) > 2 else 0.3
+        fps = float(sys.argv[3]) if len(sys.argv) > 3 else FPS
         gol_mode(density, fps)
 
 

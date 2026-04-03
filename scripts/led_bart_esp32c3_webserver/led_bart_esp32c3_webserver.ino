@@ -4,8 +4,8 @@
 #include <HardwareSerial.h>
 #include <WebSocketsServer.h>
 
-#define WIFI_SSID "0x20"
-#define WIFI_PASS "unicorns"
+#define WIFI_SSID "YOUR_SSID"
+#define WIFI_PASS "YOUR_PASS"
 #define MDNS_HOSTNAME "ledbart"
 
 #define NUM_COLS 95
