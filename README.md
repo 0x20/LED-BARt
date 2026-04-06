@@ -24,7 +24,13 @@ Live at https://0x20.github.io/LED-BARt/
 
 ![LED-BARt web interface](images/frontend.png)
 
-The `website/` folder contains a web frontend with a live pixel-accurate preview using the same 5x7 font as the hardware. Serve it from any machine on the LAN and configure a reverse proxy to forward `/text` and `/log` to the ESP32.
+The `website/` folder contains a web frontend with a pixel-accurate preview using the same 5x7 font as the hardware. It has three modes:
+
+- **Text** — type a message (max 19 chars), preview it live, send via HTTP POST
+- **Effects** — animated effects streamed over WebSocket (scroll, blink, wave, rain, sparkle, Game of Life, inverted, pulse) with adjustable speed
+- **Pixel Editor** — click/drag to draw pixels directly on the display in real time
+
+The connection indicator shows green when the WebSocket is connected for live streaming.
 
 ## Usage
 
@@ -34,9 +40,17 @@ Send text to the display via the web interface or directly:
 curl -X POST http://ledbart.local/text -H "Content-Type: text/plain" -d "HELLO WORLD"
 ```
 
+Send raw pixels (95 hex-encoded column bytes, each byte = 7 rows):
+
+```bash
+curl -X POST http://ledbart.local/pixels -H "Content-Type: text/plain" -d "7e111111117f494949..."
+```
+
+Real-time streaming via WebSocket on port 81 (95-byte binary frames).
+
 Reachable via mDNS at `ledbart.local`. The IP is also printed to Serial (115200 baud) on boot.
 
-Max 19 characters — longer text is truncated, shorter is padded with spaces.
+Max 19 characters for text mode — longer text is truncated, shorter is padded with spaces. The scroll effect removes this limit.
 
 ## Wiring
 
@@ -53,5 +67,6 @@ Max 19 characters — longer text is truncated, shorter is padded with spaces.
 |--------|------|------|
 | `scripts/led_bart_esp32c3_webserver/` | Xiao ESP32-C3 | HTTP → UART bridge + mDNS (`ledbart.local`) |
 | `scripts/led_bart_arduino_uno_uart_display/` | Arduino Uno | UART → LED bar driver (active) |
+| `scripts/gol_ledbar.py` | — | Game of Life via WebSocket (standalone Python) |
 | `scripts/font_preview.py` | — | Preview 5x7 font glyphs in the terminal |
 | `scripts/legacy/led_bart_arduino_uno_og/` | Arduino Uno | original reference code |
