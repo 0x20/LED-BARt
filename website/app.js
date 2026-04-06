@@ -1,176 +1,324 @@
+// ============================================================
+// Constants
+// ============================================================
 var LEDBART_URL = "http://ledbart.local";
-
+var WS_URL = "ws://ledbart.local:81";
+var DISPLAY_WIDTH = 95;
+var DISPLAY_HEIGHT = 7;
 var MAX_CHARS = 19;
 
-// Exact Font5x7 from the Arduino firmware (ASCII 32–126)
-// Each character is 5 bytes, each byte is a column, 7 bits per column (bit 0 = top row)
-var Font5x7 = [
-  0x00,0x00,0x00,0x00,0x00, // (space) 32
-  0x00,0x00,0x5F,0x00,0x00, // !
-  0x00,0x07,0x00,0x07,0x00, // "
-  0x14,0x7F,0x14,0x7F,0x14, // #
-  0x24,0x2A,0x7F,0x2A,0x12, // $
-  0x23,0x13,0x08,0x64,0x62, // %
-  0x36,0x49,0x55,0x22,0x50, // &
-  0x00,0x05,0x03,0x00,0x00, // '
-  0x00,0x1C,0x22,0x41,0x00, // (
-  0x00,0x41,0x22,0x1C,0x00, // )
-  0x08,0x2A,0x1C,0x2A,0x08, // *
-  0x08,0x08,0x3E,0x08,0x08, // +
-  0x00,0x50,0x30,0x00,0x00, // ,
-  0x08,0x08,0x08,0x08,0x08, // -
-  0x00,0x60,0x60,0x00,0x00, // .
-  0x20,0x10,0x08,0x04,0x02, // /
-  0x3E,0x51,0x49,0x45,0x3E, // 0
-  0x00,0x42,0x7F,0x40,0x00, // 1
-  0x42,0x61,0x51,0x49,0x46, // 2
-  0x21,0x41,0x45,0x4B,0x31, // 3
-  0x18,0x14,0x12,0x7F,0x10, // 4
-  0x27,0x45,0x45,0x45,0x39, // 5
-  0x3C,0x4A,0x49,0x49,0x30, // 6
-  0x01,0x71,0x09,0x05,0x03, // 7
-  0x36,0x49,0x49,0x49,0x36, // 8
-  0x06,0x49,0x49,0x29,0x1E, // 9
-  0x00,0x36,0x36,0x00,0x00, // :
-  0x00,0x56,0x36,0x00,0x00, // ;
-  0x00,0x08,0x14,0x22,0x41, // <
-  0x14,0x14,0x14,0x14,0x14, // =
-  0x41,0x22,0x14,0x08,0x00, // >
-  0x02,0x01,0x51,0x09,0x06, // ?
-  0x32,0x49,0x79,0x41,0x3E, // @
-  0x7E,0x11,0x11,0x11,0x7E, // A
-  0x7F,0x49,0x49,0x49,0x36, // B
-  0x3E,0x41,0x41,0x41,0x22, // C
-  0x7F,0x41,0x41,0x22,0x1C, // D
-  0x7F,0x49,0x49,0x49,0x41, // E
-  0x7F,0x09,0x09,0x01,0x01, // F
-  0x3E,0x41,0x41,0x51,0x32, // G
-  0x7F,0x08,0x08,0x08,0x7F, // H
-  0x00,0x41,0x7F,0x41,0x00, // I
-  0x20,0x40,0x41,0x3F,0x01, // J
-  0x7F,0x08,0x14,0x22,0x41, // K
-  0x7F,0x40,0x40,0x40,0x40, // L
-  0x7F,0x02,0x04,0x02,0x7F, // M
-  0x7F,0x04,0x08,0x10,0x7F, // N
-  0x3E,0x41,0x41,0x41,0x3E, // O
-  0x7F,0x09,0x09,0x09,0x06, // P
-  0x3E,0x41,0x51,0x21,0x5E, // Q
-  0x7F,0x09,0x19,0x29,0x46, // R
-  0x46,0x49,0x49,0x49,0x31, // S
-  0x01,0x01,0x7F,0x01,0x01, // T
-  0x3F,0x40,0x40,0x40,0x3F, // U
-  0x1F,0x20,0x40,0x20,0x1F, // V
-  0x7F,0x20,0x18,0x20,0x7F, // W
-  0x63,0x14,0x08,0x14,0x63, // X
-  0x03,0x04,0x78,0x04,0x03, // Y
-  0x61,0x51,0x49,0x45,0x43, // Z
-  0x00,0x00,0x7F,0x41,0x41, // [
-  0x02,0x04,0x08,0x10,0x20, // backslash
-  0x41,0x41,0x7F,0x00,0x00, // ]
-  0x04,0x02,0x01,0x02,0x04, // ^
-  0x40,0x40,0x40,0x40,0x40, // _
-  0x00,0x01,0x02,0x04,0x00, // `
-  0x20,0x54,0x54,0x54,0x78, // a
-  0x7F,0x48,0x44,0x44,0x38, // b
-  0x38,0x44,0x44,0x44,0x20, // c
-  0x38,0x44,0x44,0x48,0x7F, // d
-  0x38,0x54,0x54,0x54,0x18, // e
-  0x08,0x7E,0x09,0x01,0x02, // f
-  0x08,0x14,0x54,0x54,0x3C, // g
-  0x7F,0x08,0x04,0x04,0x78, // h
-  0x00,0x44,0x7D,0x40,0x00, // i
-  0x20,0x40,0x44,0x3D,0x00, // j
-  0x00,0x7F,0x10,0x28,0x44, // k
-  0x00,0x41,0x7F,0x40,0x00, // l
-  0x7C,0x04,0x18,0x04,0x78, // m
-  0x7C,0x08,0x04,0x04,0x78, // n
-  0x38,0x44,0x44,0x44,0x38, // o
-  0x7C,0x14,0x14,0x14,0x08, // p
-  0x08,0x14,0x14,0x18,0x7C, // q
-  0x7C,0x08,0x04,0x04,0x08, // r
-  0x48,0x54,0x54,0x54,0x20, // s
-  0x04,0x3F,0x44,0x40,0x20, // t
-  0x3C,0x40,0x40,0x20,0x7C, // u
-  0x1C,0x20,0x40,0x20,0x1C, // v
-  0x3C,0x40,0x30,0x40,0x3C, // w
-  0x44,0x28,0x10,0x28,0x44, // x
-  0x0C,0x50,0x50,0x50,0x3C, // y
-  0x44,0x64,0x54,0x4C,0x44, // z
-  0x00,0x08,0x36,0x41,0x00, // {
-  0x00,0x00,0x7F,0x00,0x00, // |
-  0x00,0x41,0x36,0x08,0x00, // }
-  0x00,0x07,0x05,0x07,0x00  // degree 126
-];
-
-var COLS = MAX_CHARS * 5; // 19 chars * 5 cols each = 95
-var ROWS = 7;
-var PX = 4;       // pixel size
-var GAP = 1;      // gap between pixels
+var PX = 4;
+var GAP = 1;
 var STEP = PX + GAP;
 
+// ============================================================
+// Frame utilities (depends on Font5x7 from font5x7.js)
+// ============================================================
+function createFrame() {
+  return new Uint8Array(DISPLAY_WIDTH);
+}
+
+function setPixel(frame, x, y, on) {
+  if (x < 0 || x >= DISPLAY_WIDTH || y < 0 || y >= DISPLAY_HEIGHT) return;
+  if (on) frame[x] |= (1 << y);
+  else frame[x] &= ~(1 << y);
+}
+
+function getPixel(frame, x, y) {
+  if (x < 0 || x >= DISPLAY_WIDTH || y < 0 || y >= DISPLAY_HEIGHT) return 0;
+  return (frame[x] >> y) & 1;
+}
+
+function textToColumns(text) {
+  var cols = [];
+  for (var i = 0; i < text.length; i++) {
+    var ch = text.charCodeAt(i);
+    if (ch < 32 || ch > 126) ch = 32;
+    for (var c = 0; c < 5; c++) {
+      cols.push(Font5x7[(ch - 32) * 5 + c]);
+    }
+  }
+  return cols;
+}
+
+function textToFrame(text) {
+  var frame = createFrame();
+  var cols = textToColumns(text);
+  for (var i = 0; i < DISPLAY_WIDTH && i < cols.length; i++) {
+    frame[i] = cols[i];
+  }
+  return frame;
+}
+
+// ============================================================
+// Canvas renderer
+// ============================================================
 var canvas = document.getElementById("led-canvas");
 var ctx = canvas.getContext("2d");
-canvas.width = COLS * STEP - GAP;
-canvas.height = ROWS * STEP - GAP;
+canvas.width = DISPLAY_WIDTH * STEP - GAP;
+canvas.height = DISPLAY_HEIGHT * STEP - GAP;
 
-var inp = document.getElementById("text-input");
-var cc = document.getElementById("char-count");
-var btn = document.getElementById("send-btn");
-var st = document.getElementById("status");
-var lb = document.getElementById("log-box");
-var lt = document.getElementById("log-toggle");
-
-function renderLED(text) {
-  // Pad/truncate to 19 chars, same as Arduino firmware
-  var chars = [];
-  for (var i = 0; i < MAX_CHARS; i++) {
-    chars[i] = i < text.length ? text.charCodeAt(i) : 32;
-  }
-
+function drawFrame(frame) {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Same nested loop as the Arduino: row -> char -> column, using bitRead
-  for (var rij = 0; rij < ROWS; rij++) {
-    for (var kar = 0; kar < MAX_CHARS; kar++) {
-      var ch = chars[kar];
-      if (ch < 32 || ch > 126) ch = 32;
-      for (var kolom = 0; kolom < 5; kolom++) {
-        var fontByte = Font5x7[(ch - 32) * 5 + kolom];
-        var lit = (fontByte >> rij) & 1;
+  for (var y = 0; y < DISPLAY_HEIGHT; y++) {
+    for (var x = 0; x < DISPLAY_WIDTH; x++) {
+      var lit = (frame[x] >> y) & 1;
+      var px = x * STEP;
+      var py = y * STEP;
 
-        var x = (kar * 5 + kolom) * STEP;
-        var y = rij * STEP;
-
-        if (lit) {
-          ctx.fillStyle = "#ff2200";
-          ctx.shadowColor = "rgba(255,34,0,0.6)";
-          ctx.shadowBlur = 3;
-        } else {
-          ctx.fillStyle = "#1a0800";
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
-        }
-        ctx.fillRect(x, y, PX, PX);
+      if (lit) {
+        ctx.fillStyle = "#ff2200";
+        ctx.shadowColor = "rgba(255,34,0,0.6)";
+        ctx.shadowBlur = 3;
+      } else {
+        ctx.fillStyle = "#1a0800";
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
       }
+      ctx.fillRect(px, py, PX, PX);
     }
   }
   ctx.shadowBlur = 0;
 }
 
-function update() {
-  renderLED(inp.value);
-  var len = inp.value.length;
-  cc.textContent = len + " / " + MAX_CHARS;
-  cc.className = "char-count" + (len > MAX_CHARS ? " over" : "");
+// ============================================================
+// WebSocket manager
+// ============================================================
+var wsManager = {
+  ws: null,
+  connected: false,
+  reconnectDelay: 1000,
+  reconnectTimer: null,
+  dot: document.getElementById("connection-dot"),
+
+  connect: function() {
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) return;
+    try {
+      this.ws = new WebSocket(WS_URL);
+      this.ws.binaryType = "arraybuffer";
+    } catch (e) {
+      this._scheduleReconnect();
+      return;
+    }
+
+    var self = this;
+    this.ws.onopen = function() {
+      self.connected = true;
+      self.reconnectDelay = 1000;
+      self.dot.className = "connection-dot connected";
+      self.dot.title = "WebSocket connected";
+    };
+    this.ws.onclose = function() {
+      self.connected = false;
+      self.dot.className = "connection-dot disconnected";
+      self.dot.title = "WebSocket disconnected";
+      self._scheduleReconnect();
+    };
+    this.ws.onerror = function() {
+      self.ws.close();
+    };
+  },
+
+  _scheduleReconnect: function() {
+    var self = this;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = setTimeout(function() {
+      self.reconnectDelay = Math.min(self.reconnectDelay * 2, 10000);
+      self.connect();
+    }, this.reconnectDelay);
+  },
+
+  sendFrame: function(frame) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(frame.buffer);
+    }
+  },
+
+  disconnect: function() {
+    clearTimeout(this.reconnectTimer);
+    if (this.ws) this.ws.close();
+  }
+};
+
+// ============================================================
+// Animation engine
+// ============================================================
+var animEngine = {
+  running: false,
+  effect: null,
+  speed: 100,
+  timer: null,
+
+  start: function(effect) {
+    this.stop();
+    this.effect = effect;
+    this.running = true;
+    if (effect.init) effect.init();
+    this._tick();
+    wsManager.connect();
+  },
+
+  _tick: function() {
+    if (!this.running || !this.effect) return;
+    var frame = this.effect.frame();
+    if (frame) {
+      drawFrame(frame);
+      wsManager.sendFrame(frame);
+    }
+    var self = this;
+    this.timer = setTimeout(function() { self._tick(); }, this.speed);
+  },
+
+  stop: function() {
+    this.running = false;
+    this.effect = null;
+    clearTimeout(this.timer);
+  },
+
+  setSpeed: function(ms) {
+    this.speed = ms;
+  }
+};
+
+// ============================================================
+// Pixel editor
+// ============================================================
+var editor = {
+  frame: createFrame(),
+  painting: false,
+  paintValue: 1,
+
+  canvasToGrid: function(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    var cx = (clientX - rect.left) * scaleX;
+    var cy = (clientY - rect.top) * scaleY;
+    var gx = Math.floor(cx / STEP);
+    var gy = Math.floor(cy / STEP);
+    if (gx >= 0 && gx < DISPLAY_WIDTH && gy >= 0 && gy < DISPLAY_HEIGHT) {
+      return { x: gx, y: gy };
+    }
+    return null;
+  },
+
+  handleStart: function(x, y) {
+    this.painting = true;
+    this.paintValue = getPixel(this.frame, x, y) ? 0 : 1;
+    setPixel(this.frame, x, y, this.paintValue);
+    drawFrame(this.frame);
+    wsManager.sendFrame(this.frame);
+  },
+
+  handleMove: function(x, y) {
+    if (!this.painting) return;
+    setPixel(this.frame, x, y, this.paintValue);
+    drawFrame(this.frame);
+    wsManager.sendFrame(this.frame);
+  },
+
+  handleEnd: function() {
+    this.painting = false;
+  },
+
+  clear: function() {
+    this.frame = createFrame();
+    drawFrame(this.frame);
+    wsManager.sendFrame(this.frame);
+  },
+
+  fill: function() {
+    this.frame = createFrame();
+    for (var x = 0; x < DISPLAY_WIDTH; x++) this.frame[x] = 0x7F;
+    drawFrame(this.frame);
+    wsManager.sendFrame(this.frame);
+  },
+
+  send: function() {
+    var hex = "";
+    for (var i = 0; i < DISPLAY_WIDTH; i++) {
+      var h = this.frame[i].toString(16);
+      if (h.length < 2) h = "0" + h;
+      hex += h;
+    }
+    var statusEl = document.getElementById("editor-status");
+    statusEl.textContent = "Sending...";
+    statusEl.className = "status";
+    fetch(LEDBART_URL + "/pixels", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: hex
+    }).then(function(r) {
+      if (r.ok) {
+        statusEl.textContent = "Sent!";
+        statusEl.className = "status ok";
+      } else {
+        statusEl.textContent = "Error: " + r.status;
+        statusEl.className = "status err";
+      }
+    }).catch(function() {
+      statusEl.textContent = "Connection failed";
+      statusEl.className = "status err";
+    });
+  }
+};
+
+// ============================================================
+// Tab/UI controller
+// ============================================================
+var currentTab = "tab-text";
+
+function switchTab(tabId) {
+  animEngine.stop();
+  document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
+  document.getElementById("stop-btn").disabled = true;
+  document.querySelector(".led-preview").classList.remove("editing");
+
+  document.querySelectorAll(".tab").forEach(function(t) {
+    t.classList.toggle("active", t.dataset.tab === tabId);
+  });
+  document.querySelectorAll(".tab-panel").forEach(function(p) {
+    p.classList.toggle("active", p.id === tabId);
+  });
+
+  currentTab = tabId;
+
+  if (tabId === "tab-text") {
+    updateTextPreview();
+  } else if (tabId === "tab-editor") {
+    document.querySelector(".led-preview").classList.add("editing");
+    drawFrame(editor.frame);
+    wsManager.connect();
+  }
 }
 
-async function send() {
-  var text = inp.value.trim();
+document.querySelectorAll(".tab").forEach(function(t) {
+  t.addEventListener("click", function() { switchTab(t.dataset.tab); });
+});
+
+// --- Text Tab ---
+var textInput = document.getElementById("text-input");
+var charCount = document.getElementById("char-count");
+var sendBtn = document.getElementById("send-btn");
+var textStatus = document.getElementById("text-status");
+
+function updateTextPreview() {
+  var text = textInput.value;
+  while (text.length < MAX_CHARS) text += " ";
+  drawFrame(textToFrame(text));
+  var len = textInput.value.length;
+  charCount.textContent = len + " / " + MAX_CHARS;
+  charCount.className = "char-count" + (len > MAX_CHARS ? " over" : "");
+}
+
+async function sendText() {
+  var text = textInput.value.trim();
   if (!text) return;
-  btn.disabled = true;
-  st.textContent = "Sending...";
-  st.className = "status";
+  sendBtn.disabled = true;
+  textStatus.textContent = "Sending...";
+  textStatus.className = "status";
   try {
     var r = await fetch(LEDBART_URL + "/text", {
       method: "POST",
@@ -178,67 +326,151 @@ async function send() {
       body: text
     });
     if (r.ok) {
-      st.textContent = "Sent!";
-      st.className = "status ok";
+      textStatus.textContent = "Sent!";
+      textStatus.className = "status ok";
     } else {
-      st.textContent = "Error: " + r.status;
-      st.className = "status err";
+      textStatus.textContent = "Error: " + r.status;
+      textStatus.className = "status err";
     }
   } catch (e) {
-    st.textContent = "Connection failed";
-    st.className = "status err";
+    textStatus.textContent = "Connection failed";
+    textStatus.className = "status err";
   }
-  btn.disabled = false;
+  sendBtn.disabled = false;
 }
+
+textInput.addEventListener("input", updateTextPreview);
+textInput.addEventListener("keydown", function(e) { if (e.key === "Enter") sendText(); });
+sendBtn.addEventListener("click", sendText);
+
+// --- Effects Tab (depends on `effects` from effects.js) ---
+var effectStatus = document.getElementById("effect-status");
+var stopBtn = document.getElementById("stop-btn");
+var speedSlider = document.getElementById("speed-slider");
+var speedValue = document.getElementById("speed-value");
+
+document.querySelectorAll(".effect-btn").forEach(function(btn) {
+  btn.addEventListener("click", function() {
+    var name = btn.dataset.effect;
+    var effect = effects[name];
+    if (!effect) return;
+
+    var needsText = ["scroll", "blink", "wave", "inverted", "pulse"];
+    if (needsText.indexOf(name) !== -1) {
+      var text = document.getElementById("effect-text-input").value;
+      if (!text) {
+        effectStatus.textContent = "Enter text first";
+        effectStatus.className = "status err";
+        return;
+      }
+    }
+
+    document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    stopBtn.disabled = false;
+
+    effectStatus.textContent = "Running: " + name;
+    effectStatus.className = "status ok";
+
+    animEngine.setSpeed(parseInt(speedSlider.value));
+    animEngine.start(effect);
+  });
+});
+
+stopBtn.addEventListener("click", function() {
+  animEngine.stop();
+  document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
+  stopBtn.disabled = true;
+  effectStatus.textContent = "Stopped";
+  effectStatus.className = "status";
+  var blank = createFrame();
+  drawFrame(blank);
+  wsManager.sendFrame(blank);
+});
+
+speedSlider.addEventListener("input", function() {
+  var val = parseInt(speedSlider.value);
+  speedValue.textContent = val + "ms";
+  animEngine.setSpeed(val);
+});
+
+// --- Pixel Editor (mouse/touch on canvas) ---
+function handleEditorPointer(e, type) {
+  if (currentTab !== "tab-editor") return;
+  e.preventDefault();
+  var touch = e.touches ? e.touches[0] : e;
+  var pos = editor.canvasToGrid(touch.clientX, touch.clientY);
+  if (!pos) return;
+  if (type === "start") editor.handleStart(pos.x, pos.y);
+  else if (type === "move") editor.handleMove(pos.x, pos.y);
+}
+
+canvas.addEventListener("mousedown", function(e) { handleEditorPointer(e, "start"); });
+canvas.addEventListener("mousemove", function(e) { handleEditorPointer(e, "move"); });
+document.addEventListener("mouseup", function() { editor.handleEnd(); });
+
+canvas.addEventListener("touchstart", function(e) { handleEditorPointer(e, "start"); }, { passive: false });
+canvas.addEventListener("touchmove", function(e) { handleEditorPointer(e, "move"); }, { passive: false });
+document.addEventListener("touchend", function() { editor.handleEnd(); });
+
+document.getElementById("editor-clear").addEventListener("click", function() { editor.clear(); });
+document.getElementById("editor-fill").addEventListener("click", function() { editor.fill(); });
+
+// --- Log section ---
+var logBox = document.getElementById("log-box");
+var logToggle = document.getElementById("log-toggle");
 
 async function getLog() {
   try {
     var r = await fetch(LEDBART_URL + "/log");
-    lb.textContent = await r.text();
-    lb.scrollTop = lb.scrollHeight;
+    logBox.textContent = await r.text();
+    logBox.scrollTop = logBox.scrollHeight;
   } catch (e) {
-    lb.textContent = "(could not reach LED-BARt)";
+    logBox.textContent = "(could not reach LED-BARt)";
   }
 }
 
-inp.addEventListener("input", update);
-inp.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
-btn.addEventListener("click", send);
-lt.addEventListener("click", function () {
-  var h = lb.style.display === "none";
-  lb.style.display = h ? "block" : "none";
-  lt.innerHTML = (h ? "\u25be" : "\u25b8") + " Log";
-  if (h) getLog();
+logToggle.addEventListener("click", function() {
+  var hidden = logBox.style.display === "none";
+  logBox.style.display = hidden ? "block" : "none";
+  logToggle.innerHTML = (hidden ? "\u25be" : "\u25b8") + " Log";
+  if (hidden) getLog();
 });
 
-update();
-
+// ============================================================
+// LAN detection
+// ============================================================
 var HACKERSPACE_SUBNET = "10.51.2.84";
 var SUBNET_MASK = "255.255.252.0";
 
 function ipToInt(ip) {
-  return ip.split(".").reduce((n, o) => (n << 8) | +o, 0) >>> 0;
+  return ip.split(".").reduce(function(n, o) { return (n << 8) | +o; }, 0) >>> 0;
 }
 
 function getLocalIPs() {
-  return new Promise(resolve => {
+  return new Promise(function(resolve) {
     var ips = [], pc = new RTCPeerConnection({ iceServers: [] });
     pc.createDataChannel("");
-    pc.createOffer().then(o => pc.setLocalDescription(o));
-    pc.onicecandidate = e => {
+    pc.createOffer().then(function(o) { pc.setLocalDescription(o); });
+    pc.onicecandidate = function(e) {
       if (!e.candidate) { pc.close(); resolve(ips); return; }
       var m = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
       if (m) ips.push(m[1]);
     };
-    setTimeout(() => { pc.close(); resolve(ips); }, 3000);
+    setTimeout(function() { pc.close(); resolve(ips); }, 3000);
   });
 }
 
 (async function checkLAN() {
   var ips = await getLocalIPs();
-  if (!ips.length) return; // can't determine — don't show warning
+  if (!ips.length) return;
   var mask = ipToInt(SUBNET_MASK);
   var net = ipToInt(HACKERSPACE_SUBNET) & mask;
-  var onLAN = ips.some(ip => (ipToInt(ip) & mask) === net);
+  var onLAN = ips.some(function(ip) { return (ipToInt(ip) & mask) === net; });
   if (!onLAN) document.getElementById("lan-warning").style.display = "block";
 })();
+
+// ============================================================
+// Init
+// ============================================================
+updateTextPreview();

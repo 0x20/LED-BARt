@@ -10,26 +10,73 @@
   <div id="lan-warning" class="lan-warning" style="display:none;">
     &#9888; LED-BARt is only accessible on the Hackerspace LAN &mdash; this will not work outside of the hackerspace.
   </div>
+
   <h1>LED-BARt</h1>
+  <div id="connection-dot" class="connection-dot disconnected" title="WebSocket disconnected"></div>
+
   <div class="container">
     <div class="led-preview">
       <canvas id="led-canvas"></canvas>
     </div>
 
-    <div class="input-group">
-      <input type="text" id="text-input" maxlength="19" placeholder="Type your message..." autofocus>
-      <button id="send-btn">SEND</button>
+    <div class="tab-bar">
+      <button class="tab active" data-tab="tab-text">Text</button>
+      <button class="tab" data-tab="tab-effects">Effects</button>
+      <button class="tab" data-tab="tab-editor">Pixel Editor</button>
     </div>
-    <div id="char-count" class="char-count">0 / 19</div>
 
-    <div id="status" class="status"></div>
+    <!-- Text Tab -->
+    <div id="tab-text" class="tab-panel active">
+      <div class="input-group">
+        <input type="text" id="text-input" maxlength="19" placeholder="Type your message..." autofocus>
+        <button id="send-btn">SEND</button>
+      </div>
+      <div id="char-count" class="char-count">0 / 19</div>
+      <div id="text-status" class="status"></div>
+    </div>
+
+    <!-- Effects Tab -->
+    <div id="tab-effects" class="tab-panel">
+      <div class="input-group">
+        <input type="text" id="effect-text-input" placeholder="Text for effects...">
+      </div>
+      <div class="effect-grid">
+        <button class="effect-btn" data-effect="scroll">Scroll</button>
+        <button class="effect-btn" data-effect="blink">Blink</button>
+        <button class="effect-btn" data-effect="wave">Wave</button>
+        <button class="effect-btn" data-effect="rain">Rain</button>
+        <button class="effect-btn" data-effect="sparkle">Sparkle</button>
+        <button class="effect-btn" data-effect="gol">Game of Life</button>
+        <button class="effect-btn" data-effect="inverted">Inverted</button>
+        <button class="effect-btn" data-effect="pulse">Pulse</button>
+      </div>
+      <div class="speed-control">
+        <label for="speed-slider">Speed</label>
+        <input type="range" id="speed-slider" min="30" max="500" value="100">
+        <span id="speed-value">100ms</span>
+      </div>
+      <button id="stop-btn" class="stop-btn" disabled>STOP</button>
+      <div id="effect-status" class="status"></div>
+    </div>
+
+    <!-- Pixel Editor Tab -->
+    <div id="tab-editor" class="tab-panel">
+      <p class="editor-hint">Click or drag on the display to toggle pixels</p>
+      <div class="editor-buttons">
+        <button id="editor-clear">Clear</button>
+        <button id="editor-fill">Fill</button>
+      </div>
+      <div id="editor-status" class="status"></div>
+    </div>
 
     <div class="log-section">
-      <h2 id="log-toggle">▸ Log</h2>
+      <h2 id="log-toggle">&#9656; Log</h2>
       <div id="log-box" class="log-box" style="display: none;"></div>
     </div>
   </div>
 
+  <script src="font5x7.js"></script>
   <script src="app.js"></script>
+  <script src="effects.js"></script>
 </body>
 </html>
