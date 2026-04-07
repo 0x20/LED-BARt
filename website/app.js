@@ -232,6 +232,9 @@ var editor = {
 var currentTab = "tab-text";
 
 function switchTab(tabId) {
+  preview.stop();
+  document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
+  document.getElementById("stop-btn").disabled = true;
   document.querySelector(".led-preview").classList.remove("editing");
 
   document.querySelectorAll(".tab").forEach(function(t) {
@@ -301,7 +304,41 @@ textInput.addEventListener("input", updateTextPreview);
 textInput.addEventListener("keydown", function(e) { if (e.key === "Enter") sendText(); });
 sendBtn.addEventListener("click", sendText);
 
-// --- Effects Tab (server-side effects via HTTP API) ---
+// --- Preview animation engine (canvas only, no WS) ---
+var preview = {
+  running: false,
+  effect: null,
+  speed: 100,
+  timer: null,
+
+  start: function(effect) {
+    this.stop();
+    this.effect = effect;
+    this.running = true;
+    if (effect.init) effect.init();
+    this._tick();
+  },
+
+  _tick: function() {
+    if (!this.running || !this.effect) return;
+    var frame = this.effect.frame();
+    if (frame) drawFrame(frame);
+    var self = this;
+    this.timer = setTimeout(function() { self._tick(); }, this.speed);
+  },
+
+  stop: function() {
+    this.running = false;
+    this.effect = null;
+    clearTimeout(this.timer);
+  },
+
+  setSpeed: function(ms) {
+    this.speed = ms;
+  }
+};
+
+// --- Effects Tab (server-side + canvas preview) ---
 var effectStatus = document.getElementById("effect-status");
 var stopBtn = document.getElementById("stop-btn");
 var speedSlider = document.getElementById("speed-slider");
@@ -316,30 +353,30 @@ function startEffect(name) {
     return;
   }
 
+  // Start canvas preview
+  var effect = effects[name];
+  if (effect) {
+    preview.setSpeed(parseInt(speedSlider.value));
+    preview.start(effect);
+  }
+
+  // Send to ESP32
   var body = { effect: name, speed: parseInt(speedSlider.value) };
   if (text) body.text = text;
 
-  effectStatus.textContent = "Starting...";
-  effectStatus.className = "status";
+  document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
+  document.querySelector('[data-effect="' + name + '"]').classList.add("active");
+  stopBtn.disabled = false;
+  effectStatus.textContent = "Running: " + name;
+  effectStatus.className = "status ok";
 
   fetch(LEDBART_URL + "/effect", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  }).then(function(r) {
-    if (r.ok) {
-      document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
-      document.querySelector('[data-effect="' + name + '"]').classList.add("active");
-      stopBtn.disabled = false;
-      effectStatus.textContent = "Running: " + name;
-      effectStatus.className = "status ok";
-    } else {
-      effectStatus.textContent = "Error: " + r.status;
-      effectStatus.className = "status err";
-    }
   }).catch(function() {
-    effectStatus.textContent = "Connection failed";
-    effectStatus.className = "status err";
+    effectStatus.textContent = "Running (preview only)";
+    effectStatus.className = "status";
   });
 }
 
@@ -350,25 +387,31 @@ document.querySelectorAll(".effect-btn").forEach(function(btn) {
 });
 
 stopBtn.addEventListener("click", function() {
-  fetch(LEDBART_URL + "/effect", { method: "DELETE" }).then(function() {
-    document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
-    stopBtn.disabled = true;
-    effectStatus.textContent = "Stopped";
-    effectStatus.className = "status";
-    drawFrame(createFrame());
-  }).catch(function() {
-    effectStatus.textContent = "Connection failed";
-    effectStatus.className = "status err";
-  });
+  preview.stop();
+  document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
+  stopBtn.disabled = true;
+  effectStatus.textContent = "Stopped";
+  effectStatus.className = "status";
+  drawFrame(createFrame());
+
+  fetch(LEDBART_URL + "/effect", { method: "DELETE" }).catch(function() {});
 });
 
 speedSlider.addEventListener("input", function() {
   var val = parseInt(speedSlider.value);
   speedValue.textContent = val + "ms";
-  // If an effect is running, restart it with the new speed
+  preview.setSpeed(val);
+  // If an effect is running on the ESP32, update its speed too
   var activeBtn = document.querySelector(".effect-btn.active");
   if (activeBtn) {
-    startEffect(activeBtn.dataset.effect);
+    var text = document.getElementById("effect-text-input").value;
+    var body = { effect: activeBtn.dataset.effect, speed: val };
+    if (text) body.text = text;
+    fetch(LEDBART_URL + "/effect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).catch(function() {});
   }
 });
 
