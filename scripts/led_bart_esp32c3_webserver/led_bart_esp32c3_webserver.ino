@@ -3,13 +3,8 @@
 #include <ESPmDNS.h>
 #include <HardwareSerial.h>
 #include <WebSocketsServer.h>
-
-#define WIFI_SSID "YOUR_SSID"
-#define WIFI_PASS "YOUR_PASS"
-#define MDNS_HOSTNAME "ledbart"
-
-#define NUM_COLS 95
-#define TEKST_LEN 19
+#include "effects.h"
+#include "config.h"
 
 // UART0 on GPIO20(RX)/GPIO21(TX) — dedicated to Arduino
 HardwareSerial UnoSerial(0);
@@ -20,103 +15,9 @@ WebSocketsServer ws(81);
 #define LOG_MAX 4096
 String logBuffer;
 
-static const uint8_t Font5x7[] = {
-    0x00,0x00,0x00,0x00,0x00, // (space) 32
-    0x00,0x00,0x5F,0x00,0x00, // !
-    0x00,0x07,0x00,0x07,0x00, // "
-    0x14,0x7F,0x14,0x7F,0x14, // #
-    0x24,0x2A,0x7F,0x2A,0x12, // $
-    0x23,0x13,0x08,0x64,0x62, // %
-    0x36,0x49,0x55,0x22,0x50, // &
-    0x00,0x05,0x03,0x00,0x00, // '
-    0x00,0x1C,0x22,0x41,0x00, // (
-    0x00,0x41,0x22,0x1C,0x00, // )
-    0x08,0x2A,0x1C,0x2A,0x08, // *
-    0x08,0x08,0x3E,0x08,0x08, // +
-    0x00,0x50,0x30,0x00,0x00, // ,
-    0x08,0x08,0x08,0x08,0x08, // -
-    0x00,0x60,0x60,0x00,0x00, // .
-    0x20,0x10,0x08,0x04,0x02, // /
-    0x3E,0x51,0x49,0x45,0x3E, // 0
-    0x00,0x42,0x7F,0x40,0x00, // 1
-    0x42,0x61,0x51,0x49,0x46, // 2
-    0x21,0x41,0x45,0x4B,0x31, // 3
-    0x18,0x14,0x12,0x7F,0x10, // 4
-    0x27,0x45,0x45,0x45,0x39, // 5
-    0x3C,0x4A,0x49,0x49,0x30, // 6
-    0x01,0x71,0x09,0x05,0x03, // 7
-    0x36,0x49,0x49,0x49,0x36, // 8
-    0x06,0x49,0x49,0x29,0x1E, // 9
-    0x00,0x36,0x36,0x00,0x00, // :
-    0x00,0x56,0x36,0x00,0x00, // ;
-    0x00,0x08,0x14,0x22,0x41, // <
-    0x14,0x14,0x14,0x14,0x14, // =
-    0x41,0x22,0x14,0x08,0x00, // >
-    0x02,0x01,0x51,0x09,0x06, // ?
-    0x32,0x49,0x79,0x41,0x3E, // @
-    0x7E,0x11,0x11,0x11,0x7E, // A
-    0x7F,0x49,0x49,0x49,0x36, // B
-    0x3E,0x41,0x41,0x41,0x22, // C
-    0x7F,0x41,0x41,0x22,0x1C, // D
-    0x7F,0x49,0x49,0x49,0x41, // E
-    0x7F,0x09,0x09,0x01,0x01, // F
-    0x3E,0x41,0x41,0x51,0x32, // G
-    0x7F,0x08,0x08,0x08,0x7F, // H
-    0x00,0x41,0x7F,0x41,0x00, // I
-    0x20,0x40,0x41,0x3F,0x01, // J
-    0x7F,0x08,0x14,0x22,0x41, // K
-    0x7F,0x40,0x40,0x40,0x40, // L
-    0x7F,0x02,0x04,0x02,0x7F, // M
-    0x7F,0x04,0x08,0x10,0x7F, // N
-    0x3E,0x41,0x41,0x41,0x3E, // O
-    0x7F,0x09,0x09,0x09,0x06, // P
-    0x3E,0x41,0x51,0x21,0x5E, // Q
-    0x7F,0x09,0x19,0x29,0x46, // R
-    0x46,0x49,0x49,0x49,0x31, // S
-    0x01,0x01,0x7F,0x01,0x01, // T
-    0x3F,0x40,0x40,0x40,0x3F, // U
-    0x1F,0x20,0x40,0x20,0x1F, // V
-    0x7F,0x20,0x18,0x20,0x7F, // W
-    0x63,0x14,0x08,0x14,0x63, // X
-    0x03,0x04,0x78,0x04,0x03, // Y
-    0x61,0x51,0x49,0x45,0x43, // Z
-    0x00,0x00,0x7F,0x41,0x41, // [
-    0x02,0x04,0x08,0x10,0x20, // backslash
-    0x41,0x41,0x7F,0x00,0x00, // ]
-    0x04,0x02,0x01,0x02,0x04, // ^
-    0x40,0x40,0x40,0x40,0x40, // _
-    0x00,0x01,0x02,0x04,0x00, // `
-    0x20,0x54,0x54,0x54,0x78, // a
-    0x7F,0x48,0x44,0x44,0x38, // b
-    0x38,0x44,0x44,0x44,0x20, // c
-    0x38,0x44,0x44,0x48,0x7F, // d
-    0x38,0x54,0x54,0x54,0x18, // e
-    0x08,0x7E,0x09,0x01,0x02, // f
-    0x08,0x14,0x54,0x54,0x3C, // g
-    0x7F,0x08,0x04,0x04,0x78, // h
-    0x00,0x44,0x7D,0x40,0x00, // i
-    0x20,0x40,0x44,0x3D,0x00, // j
-    0x00,0x7F,0x10,0x28,0x44, // k
-    0x00,0x41,0x7F,0x40,0x00, // l
-    0x7C,0x04,0x18,0x04,0x78, // m
-    0x7C,0x08,0x04,0x04,0x78, // n
-    0x38,0x44,0x44,0x44,0x38, // o
-    0x7C,0x14,0x14,0x14,0x08, // p
-    0x08,0x14,0x14,0x18,0x7C, // q
-    0x7C,0x08,0x04,0x04,0x08, // r
-    0x48,0x54,0x54,0x54,0x20, // s
-    0x04,0x3F,0x44,0x40,0x20, // t
-    0x3C,0x40,0x40,0x20,0x7C, // u
-    0x1C,0x20,0x40,0x20,0x1C, // v
-    0x3C,0x40,0x30,0x40,0x3C, // w
-    0x44,0x28,0x10,0x28,0x44, // x
-    0x0C,0x50,0x50,0x50,0x3C, // y
-    0x44,0x64,0x54,0x4C,0x44, // z
-    0x00,0x08,0x36,0x41,0x00, // {
-    0x00,0x00,0x7F,0x00,0x00, // |
-    0x00,0x41,0x36,0x08,0x00, // }
-    0x00,0x07,0x05,0x07,0x00, // degree 126
-};
+// ============================================================
+// Utility
+// ============================================================
 
 void appendLog(const String &msg) {
   logBuffer += msg + "\n";
@@ -127,20 +28,16 @@ void appendLog(const String &msg) {
 // Render text to 95 column bytes using font, send to Arduino
 void sendText(const String &text) {
   uint8_t cols[NUM_COLS];
-  for (int i = 0; i < TEKST_LEN; i++) {
-    uint8_t ch = (i < (int)text.length()) ? text[i] : ' ';
-    if (ch < 32 || ch > 126) ch = ' ';
-    int idx = (ch - 32) * 5;
-    for (int k = 0; k < 5; k++) {
-      cols[i * 5 + k] = Font5x7[idx + k];
-    }
-  }
+  memset(cols, 0, NUM_COLS);
+  String padded = text;
+  while ((int)padded.length() < TEKST_LEN) padded += ' ';
+  textToColumns(padded.c_str(), TEKST_LEN, cols, NUM_COLS);
   UnoSerial.write(cols, NUM_COLS);
 }
 
 // Send 95 raw column bytes directly to Arduino
 void sendPixels(const uint8_t *cols) {
-  UnoSerial.flush();  // wait for previous frame to finish sending
+  UnoSerial.flush();
   UnoSerial.write(cols, NUM_COLS);
 }
 
@@ -154,22 +51,25 @@ uint8_t hexVal(char c) {
 void decodeHexPixels(const char *hex, size_t len) {
   if (len < NUM_COLS * 2) return;
   uint8_t cols[NUM_COLS];
-  for (int i = 0; i < NUM_COLS; i++) {
+  for (int i = 0; i < NUM_COLS; i++)
     cols[i] = (hexVal(hex[i * 2]) << 4) | hexVal(hex[i * 2 + 1]);
-  }
   sendPixels(cols);
 }
 
-// WebSocket event handler — binary only (95 raw column bytes)
+// ============================================================
+// HTTP handlers
+// ============================================================
+
 void wsEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
   if (type == WStype_BIN && length >= NUM_COLS) {
+    stopEffect();
     sendPixels(payload);
   }
 }
 
 void cors() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
   server.sendHeader("Access-Control-Allow-Private-Network", "true");
 }
@@ -185,13 +85,13 @@ void handleText() {
     server.send(400, "text/plain", "no body");
     return;
   }
+  stopEffect();
   String body = server.arg("plain");
   appendLog("Text: " + body);
   sendText(body);
   server.send(200, "text/plain", "ok");
 }
 
-// POST /pixels — accepts 190 hex chars (95 bytes encoded)
 void handlePixels() {
   cors();
   if (!server.hasArg("plain")) {
@@ -203,6 +103,7 @@ void handlePixels() {
     server.send(400, "text/plain", "need 190 hex chars");
     return;
   }
+  stopEffect();
   decodeHexPixels(body.c_str(), body.length());
   server.send(200, "text/plain", "ok");
 }
@@ -210,6 +111,89 @@ void handlePixels() {
 void handleLog() {
   cors();
   server.send(200, "text/plain", logBuffer);
+}
+
+// POST /effect — start an effect
+void handleStartEffect() {
+  cors();
+  if (!server.hasArg("plain")) {
+    server.send(400, "application/json", "{\"error\":\"no body\"}");
+    return;
+  }
+  String body = server.arg("plain");
+
+  // Simple JSON parsing (no library needed for flat objects)
+  String effect = "";
+  String text = "";
+  int speed = 100;
+
+  int idx = body.indexOf("\"effect\"");
+  if (idx >= 0) {
+    int colon = body.indexOf(':', idx);
+    int q1 = body.indexOf('"', colon + 1);
+    int q2 = body.indexOf('"', q1 + 1);
+    if (q1 >= 0 && q2 > q1) effect = body.substring(q1 + 1, q2);
+  }
+
+  idx = body.indexOf("\"text\"");
+  if (idx >= 0) {
+    int colon = body.indexOf(':', idx);
+    int q1 = body.indexOf('"', colon + 1);
+    int q2 = body.indexOf('"', q1 + 1);
+    if (q1 >= 0 && q2 > q1) text = body.substring(q1 + 1, q2);
+  }
+
+  idx = body.indexOf("\"speed\"");
+  if (idx >= 0) {
+    int colon = body.indexOf(':', idx);
+    if (colon >= 0) {
+      String numStr = "";
+      for (int i = colon + 1; i < (int)body.length(); i++) {
+        char c = body[i];
+        if (c >= '0' && c <= '9') numStr += c;
+        else if (numStr.length() > 0) break;
+      }
+      if (numStr.length() > 0) speed = numStr.toInt();
+    }
+  }
+
+  if (effect.length() == 0) {
+    server.send(400, "application/json", "{\"error\":\"missing effect\"}");
+    return;
+  }
+  if (!isValidEffect(effect)) {
+    server.send(400, "application/json", "{\"error\":\"unknown effect\"}");
+    return;
+  }
+
+  activeEffect = effect;
+  effectText = text.length() > 0 ? text : "LED-BARt";
+  effectSpeed = speed > 0 ? speed : 100;
+
+  appendLog("Effect: " + activeEffect + " text=" + effectText + " speed=" + String(effectSpeed));
+
+  bool oneShot = initEffect();
+  if (oneShot) sendPixels(frameBuf);
+
+  server.send(200, "application/json",
+    "{\"effect\":\"" + activeEffect + "\",\"text\":\"" + effectText + "\",\"speed\":" + String(effectSpeed) + "}");
+}
+
+// DELETE /effect — stop current effect
+void handleStopEffect() {
+  cors();
+  stopEffect();
+  memset(frameBuf, 0, NUM_COLS);
+  sendPixels(frameBuf);
+  appendLog("Effect stopped");
+  server.send(200, "application/json", "{\"effect\":\"\"}");
+}
+
+// GET /effect — return current effect status
+void handleGetEffect() {
+  cors();
+  server.send(200, "application/json",
+    "{\"effect\":\"" + activeEffect + "\",\"text\":\"" + effectText + "\",\"speed\":" + String(effectSpeed) + "}");
 }
 
 void handleHelp() {
@@ -223,13 +207,22 @@ void handleHelp() {
     "\n"
     "  POST /text\n"
     "    Send text to display (max 19 chars, rendered with 5x7 font)\n"
-    "    Content-Type: text/plain\n"
-    "    curl -X POST http://ledbart.local/text -H 'Content-Type: text/plain' -d 'HELLO WORLD'\n"
+    "    curl -X POST http://ledbart.local/text -d 'HELLO WORLD'\n"
     "\n"
     "  POST /pixels\n"
-    "    Send raw pixel data as 190 hex chars (95 columns, each byte = 1 column, bits 0-6 = rows)\n"
-    "    Content-Type: text/plain\n"
-    "    python: requests.post('http://ledbart.local/pixels', data=bytes(95).hex())\n"
+    "    Send raw pixel data as 190 hex chars (95 columns)\n"
+    "\n"
+    "  POST /effect\n"
+    "    Start an effect. JSON body: {\"effect\":\"scroll\",\"text\":\"hello\",\"speed\":100}\n"
+    "    Effects: scroll, blink, wave, rain, sparkle, gol, inverted, pulse\n"
+    "    curl -X POST http://ledbart.local/effect -H 'Content-Type: application/json' -d '{\"effect\":\"rain\",\"speed\":100}'\n"
+    "\n"
+    "  DELETE /effect\n"
+    "    Stop current effect, clear display\n"
+    "    curl -X DELETE http://ledbart.local/effect\n"
+    "\n"
+    "  GET /effect\n"
+    "    Get current effect status as JSON\n"
     "\n"
     "  GET /log\n"
     "    View recent activity log\n"
@@ -238,23 +231,19 @@ void handleHelp() {
     "    This page\n"
     "\n"
     "WebSocket (port 81):\n"
-    "\n"
-    "  Binary frames only: 95 raw bytes (column data)\n"
-    "    python:\n"
-    "      import websocket\n"
-    "      ws = websocket.WebSocket()\n"
-    "      ws.connect('ws://ledbart.local:81')\n"
-    "      ws.send_binary(bytes([0x7F] * 95))  # all pixels on\n"
+    "  Binary frames: 95 raw bytes (column data)\n"
     "\n"
     "Column format:\n"
-    "  Each column byte has 7 bits: bit 0 = top row, bit 6 = bottom row\n"
+    "  Each byte = 1 column, bits 0-6 = rows (bit 0 = top, bit 6 = bottom)\n"
     "  0x7F = all rows lit, 0x00 = all rows off\n"
-    "  Columns are ordered left to right (col 0 = leftmost)\n"
   );
 }
 
+// ============================================================
+// Setup & Loop
+// ============================================================
+
 void setup() {
-  // XIAO ESP32C3: D7=GPIO20=RX, D6=GPIO21=TX
   UnoSerial.begin(115200, SERIAL_8N1, 20, 21);
   delay(500);
   sendText(" Connecting WiFi...");
@@ -273,25 +262,39 @@ void setup() {
     appendLog("mDNS failed");
   }
 
-  // HTTP endpoints (kept for compatibility)
   server.on("/text", HTTP_POST, handleText);
   server.on("/text", HTTP_OPTIONS, handleOptions);
   server.on("/pixels", HTTP_POST, handlePixels);
   server.on("/pixels", HTTP_OPTIONS, handleOptions);
+  server.on("/effect", HTTP_POST, handleStartEffect);
+  server.on("/effect", HTTP_DELETE, handleStopEffect);
+  server.on("/effect", HTTP_GET, handleGetEffect);
+  server.on("/effect", HTTP_OPTIONS, handleOptions);
   server.on("/log", HTTP_GET, handleLog);
   server.on("/log", HTTP_OPTIONS, handleOptions);
   server.on("/help", HTTP_GET, handleHelp);
   server.on("/api", HTTP_GET, handleHelp);
   server.begin();
 
-  // WebSocket on port 81 — send binary (95 bytes) or text
   ws.begin();
   ws.onEvent(wsEvent);
 
-  sendText("  Welcome to 0x20  ");
+  activeEffect = "scroll";
+  effectText = "Welcome to 0x20!";
+  effectSpeed = 80;
+  initEffect();
 }
 
 void loop() {
   server.handleClient();
   ws.loop();
+
+  if (activeEffect.length() > 0) {
+    unsigned long now = millis();
+    if (now - lastFrame >= (unsigned long)effectSpeed) {
+      lastFrame = now;
+      tickEffect();
+      sendPixels(frameBuf);
+    }
+  }
 }

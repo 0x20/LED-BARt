@@ -27,7 +27,7 @@ Live at https://0x20.github.io/LED-BARt/
 The `website/` folder contains a web frontend with a pixel-accurate preview using the same 5x7 font as the hardware. It has three modes:
 
 - **Text** — type a message (max 19 chars), preview it live, send via HTTP POST
-- **Effects** — animated effects streamed over WebSocket (scroll, blink, wave, rain, sparkle, Game of Life, inverted, pulse) with adjustable speed
+- **Effects** — animated effects running on the ESP32 itself (scroll, blink, wave, rain, sparkle, Game of Life, inverted, pulse) with adjustable speed — effects persist even when the browser is closed
 - **Pixel Editor** — click/drag to draw pixels directly on the display in real time
 
 The connection indicator shows green when the WebSocket is connected for live streaming.
@@ -40,17 +40,24 @@ Send text to the display via the web interface or directly:
 curl -X POST http://ledbart.local/text -H "Content-Type: text/plain" -d "HELLO WORLD"
 ```
 
-Send raw pixels (95 hex-encoded column bytes, each byte = 7 rows):
+Reachable via mDNS at `ledbart.local`. Max 19 characters — longer text is truncated, shorter is padded with spaces.
 
-```bash
-curl -X POST http://ledbart.local/pixels -H "Content-Type: text/plain" -d "7e111111117f494949..."
-```
+## API
 
-Real-time streaming via WebSocket on port 81 (95-byte binary frames).
+| Endpoint | Method | Body | Description |
+|----------|--------|------|-------------|
+| `/text` | POST | plain text | Send text to display (max 19 chars, 5x7 font) |
+| `/pixels` | POST | 190 hex chars | Send raw pixel data (95 column bytes) |
+| `/effect` | POST | JSON `{"effect":"scroll","text":"hello","speed":80}` | Start a server-side effect |
+| `/effect` | GET | — | Get current effect status |
+| `/effect` | DELETE | — | Stop effect, clear display |
+| `/log` | GET | — | View activity log |
+| `/help` | GET | — | API help text |
+| WebSocket `:81` | binary | 95 bytes | Real-time pixel streaming |
 
-Reachable via mDNS at `ledbart.local`. The IP is also printed to Serial (115200 baud) on boot.
+Effects: `scroll`, `blink`, `wave`, `rain`, `sparkle`, `gol`, `inverted`, `pulse`
 
-Max 19 characters for text mode — longer text is truncated, shorter is padded with spaces. The scroll effect removes this limit.
+Effects run on the ESP32 and persist without a client connected. Any direct interaction (text, pixels, WebSocket) automatically stops a running effect.
 
 ## Flashing
 
@@ -76,7 +83,6 @@ No external libraries needed — uses only `Arduino.h`.
 | D6 (TX)  | pin 0 (RX)  |
 | GND      | GND         |
 
-> Disconnect the wire from Uno pin 0 before uploading a sketch, reconnect after.
 
 ## Scripts
 

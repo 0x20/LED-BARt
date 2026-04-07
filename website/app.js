@@ -142,45 +142,6 @@ var wsManager = {
   }
 };
 
-// ============================================================
-// Animation engine
-// ============================================================
-var animEngine = {
-  running: false,
-  effect: null,
-  speed: 100,
-  timer: null,
-
-  start: function(effect) {
-    this.stop();
-    this.effect = effect;
-    this.running = true;
-    if (effect.init) effect.init();
-    this._tick();
-    wsManager.connect();
-  },
-
-  _tick: function() {
-    if (!this.running || !this.effect) return;
-    var frame = this.effect.frame();
-    if (frame) {
-      drawFrame(frame);
-      wsManager.sendFrame(frame);
-    }
-    var self = this;
-    this.timer = setTimeout(function() { self._tick(); }, this.speed);
-  },
-
-  stop: function() {
-    this.running = false;
-    this.effect = null;
-    clearTimeout(this.timer);
-  },
-
-  setSpeed: function(ms) {
-    this.speed = ms;
-  }
-};
 
 // ============================================================
 // Pixel editor
@@ -271,9 +232,6 @@ var editor = {
 var currentTab = "tab-text";
 
 function switchTab(tabId) {
-  animEngine.stop();
-  document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
-  document.getElementById("stop-btn").disabled = true;
   document.querySelector(".led-preview").classList.remove("editing");
 
   document.querySelectorAll(".tab").forEach(function(t) {
@@ -343,55 +301,75 @@ textInput.addEventListener("input", updateTextPreview);
 textInput.addEventListener("keydown", function(e) { if (e.key === "Enter") sendText(); });
 sendBtn.addEventListener("click", sendText);
 
-// --- Effects Tab (depends on `effects` from effects.js) ---
+// --- Effects Tab (server-side effects via HTTP API) ---
 var effectStatus = document.getElementById("effect-status");
 var stopBtn = document.getElementById("stop-btn");
 var speedSlider = document.getElementById("speed-slider");
 var speedValue = document.getElementById("speed-value");
 
+function startEffect(name) {
+  var needsText = ["scroll", "blink", "wave", "inverted", "pulse"];
+  var text = document.getElementById("effect-text-input").value;
+  if (needsText.indexOf(name) !== -1 && !text) {
+    effectStatus.textContent = "Enter text first";
+    effectStatus.className = "status err";
+    return;
+  }
+
+  var body = { effect: name, speed: parseInt(speedSlider.value) };
+  if (text) body.text = text;
+
+  effectStatus.textContent = "Starting...";
+  effectStatus.className = "status";
+
+  fetch(LEDBART_URL + "/effect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }).then(function(r) {
+    if (r.ok) {
+      document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
+      document.querySelector('[data-effect="' + name + '"]').classList.add("active");
+      stopBtn.disabled = false;
+      effectStatus.textContent = "Running: " + name;
+      effectStatus.className = "status ok";
+    } else {
+      effectStatus.textContent = "Error: " + r.status;
+      effectStatus.className = "status err";
+    }
+  }).catch(function() {
+    effectStatus.textContent = "Connection failed";
+    effectStatus.className = "status err";
+  });
+}
+
 document.querySelectorAll(".effect-btn").forEach(function(btn) {
   btn.addEventListener("click", function() {
-    var name = btn.dataset.effect;
-    var effect = effects[name];
-    if (!effect) return;
-
-    var needsText = ["scroll", "blink", "wave", "inverted", "pulse"];
-    if (needsText.indexOf(name) !== -1) {
-      var text = document.getElementById("effect-text-input").value;
-      if (!text) {
-        effectStatus.textContent = "Enter text first";
-        effectStatus.className = "status err";
-        return;
-      }
-    }
-
-    document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
-    btn.classList.add("active");
-    stopBtn.disabled = false;
-
-    effectStatus.textContent = "Running: " + name;
-    effectStatus.className = "status ok";
-
-    animEngine.setSpeed(parseInt(speedSlider.value));
-    animEngine.start(effect);
+    startEffect(btn.dataset.effect);
   });
 });
 
 stopBtn.addEventListener("click", function() {
-  animEngine.stop();
-  document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
-  stopBtn.disabled = true;
-  effectStatus.textContent = "Stopped";
-  effectStatus.className = "status";
-  var blank = createFrame();
-  drawFrame(blank);
-  wsManager.sendFrame(blank);
+  fetch(LEDBART_URL + "/effect", { method: "DELETE" }).then(function() {
+    document.querySelectorAll(".effect-btn").forEach(function(b) { b.classList.remove("active"); });
+    stopBtn.disabled = true;
+    effectStatus.textContent = "Stopped";
+    effectStatus.className = "status";
+    drawFrame(createFrame());
+  }).catch(function() {
+    effectStatus.textContent = "Connection failed";
+    effectStatus.className = "status err";
+  });
 });
 
 speedSlider.addEventListener("input", function() {
   var val = parseInt(speedSlider.value);
   speedValue.textContent = val + "ms";
-  animEngine.setSpeed(val);
+  // If an effect is running, restart it with the new speed
+  var activeBtn = document.querySelector(".effect-btn.active");
+  if (activeBtn) {
+    startEffect(activeBtn.dataset.effect);
+  }
 });
 
 // --- Pixel Editor (mouse/touch on canvas) ---

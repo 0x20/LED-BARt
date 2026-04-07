@@ -3,3 +3,6 @@
 
 # PlatformIO
 .pio/
+
+# WiFi credentials
+scripts/led_bart_esp32c3_webserver/config.h
