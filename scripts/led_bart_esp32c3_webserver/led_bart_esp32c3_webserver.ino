@@ -171,6 +171,7 @@ void cors() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+  server.sendHeader("Access-Control-Allow-Private-Network", "true");
 }
 
 void handleOptions() {
@@ -256,6 +257,7 @@ void setup() {
   // XIAO ESP32C3: D7=GPIO20=RX, D6=GPIO21=TX
   UnoSerial.begin(115200, SERIAL_8N1, 20, 21);
   delay(500);
+  sendText(" Connecting WiFi...");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   WiFi.setSleep(false);
   appendLog("Connecting to WiFi...");
@@ -285,6 +287,8 @@ void setup() {
   // WebSocket on port 81 — send binary (95 bytes) or text
   ws.begin();
   ws.onEvent(wsEvent);
+
+  sendText("  Welcome to 0x20  ");
 }
 
 void loop() {

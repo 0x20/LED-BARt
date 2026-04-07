@@ -52,6 +52,23 @@ Reachable via mDNS at `ledbart.local`. The IP is also printed to Serial (115200 
 
 Max 19 characters for text mode — longer text is truncated, shorter is padded with spaces. The scroll effect removes this limit.
 
+## Flashing
+
+### ESP32-C3 (webserver)
+
+Board: **Seeed XIAO ESP32C3** (install [Seeed boards package](https://wiki.seeedstudio.com/xiao_esp32c3_getting_started/) in Arduino IDE)
+
+Libraries:
+- [WebSockets](https://github.com/Links2004/arduinoWebSockets) by Markus Sattler (v2.4.0+)
+
+Built-in (included with ESP32 board package): `WiFi`, `WebServer`, `ESPmDNS`, `HardwareSerial`
+
+### Arduino Uno (LED driver)
+
+No external libraries needed — uses only `Arduino.h`.
+
+> Disconnect the wire from Uno pin 0 (RX) before uploading, reconnect after.
+
 ## Wiring
 
 | ESP32-C3 | Arduino Uno |
