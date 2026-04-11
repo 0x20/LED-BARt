@@ -118,23 +118,15 @@ extern String effectText;
 extern int    effectSpeed;
 extern unsigned long lastFrame;
 extern uint8_t frameBuf[NUM_COLS];
+extern uint8_t frameLevels[DISPLAY_HEIGHT][NUM_COLS];
+extern bool    effectUsesLevels;
 
 // ============================================================
 // Public API
 // ============================================================
 
-// Render text to column bytes. Returns number of columns written.
 int textToColumns(const char *text, int textLen, uint8_t *out, int maxCols);
-
-// Initialize the current activeEffect. Returns true if frameBuf
-// is ready to send immediately (one-shot effects like inverted).
 bool initEffect();
-
-// Advance the current effect by one frame into frameBuf.
 void tickEffect();
-
-// Stop the running effect and clear state.
 void stopEffect();
-
-// Check if the given name is a valid effect.
 bool isValidEffect(const String &name);

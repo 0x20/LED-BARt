@@ -1,4 +1,5 @@
 #include "effects.h"
+#include <math.h>
 
 // ============================================================
 // Shared state (declared extern in effects.h)
@@ -8,6 +9,8 @@ String effectText = "";
 int    effectSpeed = 100;
 unsigned long lastFrame = 0;
 uint8_t frameBuf[NUM_COLS];
+uint8_t frameLevels[DISPLAY_HEIGHT][NUM_COLS];
+bool    effectUsesLevels = false;
 
 // ============================================================
 // Per-effect state
@@ -34,6 +37,16 @@ static int golStale = 0;
 
 // Pulse
 static int pulseTick = 0;
+
+// Perlin noise
+static float perlinOffset = 0;
+
+// Plasma
+static int plasmaTick = 0;
+
+// Rain16 (rain with brightness levels)
+static int8_t rain16Y[NUM_COLS];       // drop Y position (-N = waiting above screen)
+static uint8_t rain16Bright[NUM_COLS]; // drop head brightness
 
 // ============================================================
 // Helpers
@@ -93,6 +106,91 @@ static void initGol() {
 }
 
 static void initPulse() { pulseTick = 0; }
+
+// Perlin noise helpers
+static uint8_t noiseHash(int x, int y) {
+  int h = x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return h & 0xFF;
+}
+
+static float noiseLerp(float a, float b, float t) {
+  float f = (1.0f - cosf(t * 3.14159f)) * 0.5f;
+  return a + (b - a) * f;
+}
+
+static float noise2d(float x, float y) {
+  int ix = (int)floorf(x), iy = (int)floorf(y);
+  float fx = x - ix, fy = y - iy;
+  float v00 = noiseHash(ix, iy) / 255.0f;
+  float v10 = noiseHash(ix + 1, iy) / 255.0f;
+  float v01 = noiseHash(ix, iy + 1) / 255.0f;
+  float v11 = noiseHash(ix + 1, iy + 1) / 255.0f;
+  return noiseLerp(noiseLerp(v00, v10, fx), noiseLerp(v01, v11, fx), fy);
+}
+
+static void initPerlin() { perlinOffset = 0; }
+
+static void tickPerlin() {
+  // Two noise layers drifting in different directions — shimmers in place
+  // instead of scrolling. Lava-lamp feel.
+  float t = perlinOffset;
+  for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+    for (int x = 0; x < NUM_COLS; x++) {
+      float n1 = noise2d(x * 0.08f + t * 0.02f, y * 0.4f + t * 0.03f);
+      float n2 = noise2d(x * 0.12f + 50.0f - t * 0.015f, y * 0.3f + 30.0f + t * 0.025f);
+      float n = (n1 + n2) * 0.5f;
+      frameLevels[y][x] = (uint8_t)(n * 15.99f);
+    }
+  }
+  perlinOffset += 1.0f;
+}
+
+static void initPlasma() { plasmaTick = 0; }
+
+static void tickPlasma() {
+  float t = plasmaTick * 0.05f;
+  for (int y = 0; y < DISPLAY_HEIGHT; y++) {
+    for (int x = 0; x < NUM_COLS; x++) {
+      float v = sinf(x * 0.1f + t);
+      v += sinf(y * 0.3f + t * 1.3f);
+      v += sinf((x + y) * 0.08f + t * 0.7f);
+      v += sinf(sqrtf((float)(x * x + y * y)) * 0.12f - t * 0.9f);
+      v = (v + 4.0f) / 8.0f;  // normalize 0..1
+      frameLevels[y][x] = (uint8_t)(v * 15.99f);
+    }
+  }
+  plasmaTick++;
+}
+
+static void initRain16() {
+  for (int x = 0; x < NUM_COLS; x++) {
+    rain16Y[x] = -(int8_t)random(20);  // stagger start positions
+    rain16Bright[x] = 8 + random(8);
+  }
+}
+
+static void tickRain16() {
+  memset(frameLevels, 0, sizeof(frameLevels));
+  for (int x = 0; x < NUM_COLS; x++) {
+    // Draw drop with fading trail
+    if (rain16Y[x] >= 0) {
+      for (int t = 0; t < 5; t++) {
+        int y = rain16Y[x] - t;
+        if (y >= 0 && y < DISPLAY_HEIGHT) {
+          int bright = rain16Bright[x] - t * 3;
+          if (bright > 0) frameLevels[y][x] = bright;
+        }
+      }
+    }
+    rain16Y[x]++;
+    // Reset when fully off screen
+    if (rain16Y[x] > DISPLAY_HEIGHT + 5) {
+      rain16Y[x] = -(int8_t)random(15);
+      rain16Bright[x] = 8 + random(8);
+    }
+  }
+}
 
 // ============================================================
 // Tick functions
@@ -234,7 +332,8 @@ static void tickPulse() {
 bool isValidEffect(const String &name) {
   return name == "scroll" || name == "blink" || name == "wave" ||
          name == "rain"   || name == "sparkle" || name == "gol" ||
-         name == "inverted" || name == "pulse";
+         name == "inverted" || name == "pulse" || name == "perlin" ||
+         name == "plasma" || name == "rain16";
 }
 
 void stopEffect() {
@@ -244,6 +343,8 @@ void stopEffect() {
 
 bool initEffect() {
   memset(frameBuf, 0, NUM_COLS);
+  memset(frameLevels, 0, sizeof(frameLevels));
+  effectUsesLevels = false;
   lastFrame = millis();
 
   if (activeEffect == "scroll")       initScroll();
@@ -253,6 +354,9 @@ bool initEffect() {
   else if (activeEffect == "sparkle") { /* stateless */ }
   else if (activeEffect == "gol")     initGol();
   else if (activeEffect == "pulse")   initPulse();
+  else if (activeEffect == "perlin")  { initPerlin(); effectUsesLevels = true; }
+  else if (activeEffect == "plasma")  { initPlasma(); effectUsesLevels = true; }
+  else if (activeEffect == "rain16")  { initRain16(); effectUsesLevels = true; }
   else if (activeEffect == "inverted") {
     // One-shot: render inverted text into frameBuf, caller sends it
     renderTextToFrameBuf(effectText);
@@ -272,4 +376,7 @@ void tickEffect() {
   else if (activeEffect == "sparkle") tickSparkle();
   else if (activeEffect == "gol")     tickGol();
   else if (activeEffect == "pulse")   tickPulse();
+  else if (activeEffect == "perlin")  tickPerlin();
+  else if (activeEffect == "plasma")  tickPlasma();
+  else if (activeEffect == "rain16")  tickRain16();
 }

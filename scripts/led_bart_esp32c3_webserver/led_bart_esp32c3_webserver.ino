@@ -6,7 +6,7 @@
 #include "effects.h"
 #include "config.h"
 
-// UART0 on GPIO20(RX)/GPIO21(TX) — dedicated to Arduino
+// UART1 on GPIO20(RX)/GPIO21(TX) — dedicated to Arduino.
 HardwareSerial UnoSerial(0);
 
 WebServer server(80);
@@ -15,14 +15,110 @@ WebSocketsServer ws(81);
 #define LOG_MAX 4096
 String logBuffer;
 
-// ============================================================
-// Utility
-// ============================================================
+// Wire protocol: [0xAA][0x55][data...] where byte 0 bit 7 distinguishes
+// frames (bit7=0, 336 data + 1 CRC) from commands (bit7=1, cmd-specific payload).
+#define WIRE_SYNC1  0xAA
+#define WIRE_SYNC2  0x55
+#define WIRE_PLANES 4
+#define WIRE_BYTES_PER_ROW 12
+#define WIRE_FRAME_BYTES (WIRE_PLANES * 7 * WIRE_BYTES_PER_ROW)
+
+// Flicker-free BAM LUT: user level 0..15 → plane mask.
+// BAM weights [2,4,5,8]. Every non-off level uses 2+ planes so pixels
+// get 2+ pulses per frame (125Hz+) — no visible flicker.
+//
+// Levels 1-2 use temporal dithering (randomly off or sum 6 per frame)
+// to fill the gap between off and the dimmest multi-plane level.
+// Levels 3-15 map directly to multi-plane patterns.
+static const uint8_t USER_TO_BAM[16] = {
+  0x0,  // 0: off
+  0xFF, // 1: DITHER marker (handled in code)
+  0xFF, // 2: DITHER marker
+  0x3,  // 3: sum 6   (2+4)     dimmest solid
+  0x5,  // 4: sum 7   (2+5)
+  0x6,  // 5: sum 9   (4+5)
+  0x9,  // 6: sum 10  (2+8)
+  0x7,  // 7: sum 11  (2+4+5)
+  0xA,  // 8: sum 12  (4+8)
+  0xC,  // 9: sum 13  (5+8)
+  0xB,  // 10: sum 14 (2+4+8)
+  0xD,  // 11: sum 15 (2+5+8)
+  0xE,  // 12: sum 17 (4+5+8)
+  0xF,  // 13: sum 19 (all)
+  0xF,  // 14: sum 19
+  0xF,  // 15: sum 19
+};
+
+// Resolve a user level to a BAM plane mask, with temporal dithering
+// for levels 1-2 (the gap between off and dimmest multi-plane).
+static inline uint8_t resolveBAM(uint8_t level) {
+  uint8_t bam = USER_TO_BAM[level & 0x0F];
+  if (bam != 0xFF) return bam;
+  // Dither: level 1 = ~33% chance of sum 6, level 2 = ~67%
+  // This gives perceived brightness between off and sum 6.
+  return (random(3) < (level & 0x0F)) ? 0x3 : 0x0;
+}
+
+// Pack pixel into BAM planes. Col c → SPI bit position (c+1), skipping
+// the padding bit at position 0 (byte 0 MSB, falls off 95-cell chain).
+static inline void packPixel(uint8_t packed[WIRE_PLANES][7][WIRE_BYTES_PER_ROW],
+                             int col, int row, uint8_t bam) {
+  int bp = col;
+  uint8_t mask = 1 << (7 - (bp & 7));
+  int bi = bp >> 3;
+  if (bam & 1) packed[0][row][bi] |= mask;
+  if (bam & 2) packed[1][row][bi] |= mask;
+  if (bam & 4) packed[2][row][bi] |= mask;
+  if (bam & 8) packed[3][row][bi] |= mask;
+}
 
 void appendLog(const String &msg) {
   logBuffer += msg + "\n";
   if (logBuffer.length() > LOG_MAX)
     logBuffer = logBuffer.substring(logBuffer.length() - LOG_MAX);
+}
+static void wireSend(const uint8_t packed[WIRE_PLANES][7][WIRE_BYTES_PER_ROW]) {
+  const uint8_t *p = (const uint8_t *)packed;
+  uint8_t crc = 0;
+  for (int i = 0; i < WIRE_FRAME_BYTES; i++) crc ^= p[i];
+
+  UnoSerial.write(WIRE_SYNC1);
+  UnoSerial.write(WIRE_SYNC2);
+  UnoSerial.write(p, WIRE_FRAME_BYTES);
+  UnoSerial.write(crc);
+}
+
+// Send 95 raw 1-bit column bytes (existing effects format) to the UNO.
+// Lit pixels are sent at full brightness (BAM pattern 0b1111 = sum 15).
+void sendPixels(const uint8_t *cols) {
+  static uint8_t packed[WIRE_PLANES][7][WIRE_BYTES_PER_ROW];
+  memset(packed, 0, sizeof(packed));
+
+  for (int col = 0; col < NUM_COLS; col++) {
+    uint8_t colByte = cols[col];
+    if (colByte == 0) continue;
+    for (int r = 0; r < 7; r++) {
+      if (colByte & (1 << r)) packPixel(packed, col, r, 0b1111);
+    }
+  }
+
+  wireSend(packed);
+}
+
+// Send a row-major level array (7 rows × 95 cols, values 0..15) through
+// the gamma LUT. Use this from gradient-aware effects when they exist.
+void sendLevels(const uint8_t levels[7][NUM_COLS]) {
+  static uint8_t packed[WIRE_PLANES][7][WIRE_BYTES_PER_ROW];
+  memset(packed, 0, sizeof(packed));
+
+  for (int r = 0; r < 7; r++) {
+    for (int col = 0; col < NUM_COLS; col++) {
+      uint8_t bam = resolveBAM(levels[r][col]);
+      if (bam) packPixel(packed, col, r, bam);
+    }
+  }
+
+  wireSend(packed);
 }
 
 // Render text to 95 column bytes using font, send to Arduino
@@ -32,13 +128,7 @@ void sendText(const String &text) {
   String padded = text;
   while ((int)padded.length() < TEKST_LEN) padded += ' ';
   textToColumns(padded.c_str(), TEKST_LEN, cols, NUM_COLS);
-  UnoSerial.write(cols, NUM_COLS);
-}
-
-// Send 95 raw column bytes directly to Arduino
-void sendPixels(const uint8_t *cols) {
-  UnoSerial.flush();
-  UnoSerial.write(cols, NUM_COLS);
+  sendPixels(cols);
 }
 
 uint8_t hexVal(char c) {
@@ -244,7 +334,7 @@ void handleHelp() {
 // ============================================================
 
 void setup() {
-  UnoSerial.begin(115200, SERIAL_8N1, 20, 21);
+  UnoSerial.begin(500000, SERIAL_8N1, 20, 21);
   delay(500);
   sendText(" Connecting WiFi...");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -283,18 +373,29 @@ void setup() {
   effectText = "Welcome to 0x20!";
   effectSpeed = 80;
   initEffect();
+
 }
 
 void loop() {
-  server.handleClient();
-  ws.loop();
-
+  // Effect first — runs before server can block
   if (activeEffect.length() > 0) {
     unsigned long now = millis();
     if (now - lastFrame >= (unsigned long)effectSpeed) {
-      lastFrame = now;
+      lastFrame += effectSpeed;
+      if (now - lastFrame > (unsigned long)effectSpeed) lastFrame = now;
       tickEffect();
-      sendPixels(frameBuf);
+      if (effectUsesLevels)
+        sendLevels(frameLevels);
+      else
+        sendPixels(frameBuf);
     }
+  }
+  // Throttle server handling so network housekeeping can't stall effects.
+  // HTTP responses delayed up to 200ms — fine for a display controller.
+  static unsigned long lastServer = 0;
+  if (millis() - lastServer > 200) {
+    lastServer = millis();
+    server.handleClient();
+    ws.loop();
   }
 }
