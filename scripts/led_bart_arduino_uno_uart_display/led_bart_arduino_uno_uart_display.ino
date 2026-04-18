@@ -7,7 +7,7 @@
 #define KLOK 2
 #define DATA 3
 
-byte pinRij[7] = {10, 9, 8, 7, 6, 5, 4};
+byte pinRij[7] = {4, 5, 6, 7, 8, 9, 10};
 
 #define PULSTIJD 1500
 #define NUM_COLS 95
@@ -15,13 +15,16 @@ byte pinRij[7] = {10, 9, 8, 7, 6, 5, 4};
 unsigned char kolommen[NUM_COLS];
 unsigned char rxBuf[NUM_COLS];
 byte rxIdx = 0;
+bool frameReady = false;
 
 void checkSerial() {
-  while (Serial.available()) {
+  byte limit = 16;  // don't hog CPU — keep the multiplex alive
+  while (Serial.available() && limit--) {
     rxBuf[rxIdx++] = Serial.read();
     if (rxIdx >= NUM_COLS) {
-      memcpy(kolommen, rxBuf, NUM_COLS);
+      frameReady = true;  // swap happens at top of next sweep to avoid tearing
       rxIdx = 0;
+      return;
     }
   }
 }
@@ -39,9 +42,14 @@ void setup() {
 }
 
 void loop() {
+  if (frameReady) {
+    memcpy(kolommen, rxBuf, NUM_COLS);
+    frameReady = false;
+  }
+  // Ceiling-mounted: row flip via reversed pinRij[], column flip via mirrored index below.
   for (int rij = 0; rij < 7; rij++) {
     for (int col = 0; col < NUM_COLS; col++) {
-      if (bitRead(kolommen[col], rij)) {
+      if (bitRead(kolommen[NUM_COLS - 1 - col], rij)) {
         digitalWrite(KLOK, HIGH);
         digitalWrite(DATA, HIGH);
         digitalWrite(KLOK, LOW);

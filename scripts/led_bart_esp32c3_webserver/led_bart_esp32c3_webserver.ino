@@ -37,7 +37,6 @@ void sendText(const String &text) {
 
 // Send 95 raw column bytes directly to Arduino
 void sendPixels(const uint8_t *cols) {
-  UnoSerial.flush();
   UnoSerial.write(cols, NUM_COLS);
 }
 
